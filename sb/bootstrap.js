@@ -255,9 +255,10 @@
     return wrap;
   };
   var DEFAULTS = { reason: "brandbrain", models: ["sonnet"], tools: [], storage: {} };
+  var BASE = "/brandbrain-web";
   async function loadManifest() {
     try {
-      const r = await fetch("/switchboard.json");
+      const r = await fetch(`${BASE}/switchboard.json`);
       if (r.ok) return { ...DEFAULTS, ...await r.json() };
     } catch {
     }
