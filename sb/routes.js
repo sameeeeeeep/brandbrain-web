@@ -110,6 +110,15 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     };
   }
   function installFetchShim(app) {
+    const dispatch = (input, init) => {
+      const raw = typeof input === "string" ? input : input.url;
+      return app.handle(new Request(raw, init));
+    };
+    if (typeof window !== "undefined" && Array.isArray(window.__sbQ)) {
+      window.__sbRoute = dispatch;
+      for (const [input, init, res, rej] of window.__sbQ.splice(0)) dispatch(input, init).then(res, rej);
+      return;
+    }
     const orig = globalThis.fetch?.bind(globalThis);
     globalThis.fetch = (input, init) => {
       const raw = typeof input === "string" ? input : input.url;
@@ -3212,6 +3221,10 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
       throw err;
     }
     workspaceRead = true;
+    try {
+      sessionStorage.removeItem("sb:rehydrated");
+    } catch {
+    }
     if (!raw) return null;
     try {
       return JSON.parse(raw);
