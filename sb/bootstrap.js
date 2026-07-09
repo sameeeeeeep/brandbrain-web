@@ -49,7 +49,7 @@
 .menu .foot { padding: 8px 10px 4px; font-size: 11px; font-weight: 500; color: #6E7C90; line-height: 1.4; }
 `;
   function mountConnect(target, opts = {}) {
-    const installUrl = opts.installUrl ?? "https://relay.dev/install";
+    const installUrl = opts.installUrl ?? "https://thelastprompt.ai/switchboard/";
     const host = document.createElement("div");
     host.style.display = "inline-block";
     const root = host.attachShadow({ mode: "open" });
@@ -348,7 +348,7 @@
       };
     }
   };
-  var DEFAULT_INSTALL_URL = "https://relay.dev/install";
+  var DEFAULT_INSTALL_URL = "https://thelastprompt.ai/switchboard/";
   function getRelay(opts) {
     const provider2 = globalThis[PROVIDER_GLOBAL];
     if (provider2?.isRelay)
@@ -427,10 +427,21 @@
   }
 
   // examples/brandbrain-port/src/bootstrap.js
+  function flattenPalette(raw) {
+    const flat = [], rich = [];
+    for (const p of Array.isArray(raw) ? raw : []) {
+      if (typeof p === "string" && p.trim()) flat.push(p.trim());
+      else if (p && typeof p.hex === "string" && p.hex.trim()) {
+        flat.push(p.hex.trim());
+        rich.push({ name: String(p.name || "").trim(), hex: p.hex.trim() });
+      }
+    }
+    return { flat, rich };
+  }
   function brandToContext(b) {
     const L = b.locks || {};
     const line = (c) => c && (c.title || c.name) || "";
-    const palette = L.identity && L.identity.palette || b.palette || [];
+    const { flat: palette, rich: paletteRich } = flattenPalette(L.identity && L.identity.palette || b.palette || []);
     const products = [line(L.range), line(L.format), b.idea].filter(Boolean);
     return {
       id: b.id,
@@ -441,7 +452,8 @@
         voice: line(L.voice) || b.brief && b.brief.vibe || "",
         positioning: line(L.positioning) || "",
         audience: line(L.audience) || b.brief && b.brief.audience || "",
-        palette: Array.isArray(palette) ? palette : [],
+        palette,
+        ...paletteRich.length ? { paletteRich } : {},
         products
       }
     };
@@ -468,7 +480,7 @@
     }
   }
   var DEFAULTS = { reason: "brandbrain", models: ["sonnet"], tools: [], storage: {} };
-  var BASE = "/brandbrain-web";
+  var BASE = "";
   async function loadManifest() {
     try {
       const r = await fetch(`${BASE}/switchboard.json`);
