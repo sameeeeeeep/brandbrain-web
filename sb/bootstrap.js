@@ -392,7 +392,7 @@
   function getProvider() {
     return provider;
   }
-  function whenProvider(timeoutMs = 3e3) {
+  function whenProvider(timeoutMs = 15e3) {
     if (provider) return Promise.resolve(provider);
     return Promise.race([_ready, new Promise((r) => setTimeout(() => r(provider), timeoutMs))]);
   }
@@ -424,6 +424,11 @@
     } catch {
       return null;
     }
+  }
+  var workspaceRead = false;
+  var workspaceLost = false;
+  function workspaceLoadLost() {
+    return workspaceLost && !workspaceRead;
   }
 
   // examples/brandbrain-port/src/bootstrap.js
@@ -520,7 +525,7 @@
         }
       }
       await publishBrands(relay);
-      if (fresh) rehydrate();
+      if (fresh || workspaceLoadLost()) rehydrate();
     }
     const dock = document.createElement("div");
     dock.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483000";

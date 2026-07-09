@@ -22,7 +22,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
   function getProvider() {
     return provider;
   }
-  function whenProvider(timeoutMs = 3e3) {
+  function whenProvider(timeoutMs = 15e3) {
     if (provider) return Promise.resolve(provider);
     return Promise.race([_ready, new Promise((r) => setTimeout(() => r(provider), timeoutMs))]);
   }
@@ -3202,8 +3202,15 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
   }
   var workspaceRead = false;
   var vendorsRead = false;
+  var workspaceLost = false;
   async function readWorkspace() {
-    const raw = await storageGet(WORKSPACE_KEY);
+    let raw;
+    try {
+      raw = await storageGet(WORKSPACE_KEY);
+    } catch (err) {
+      workspaceLost = true;
+      throw err;
+    }
     workspaceRead = true;
     if (!raw) return null;
     try {
