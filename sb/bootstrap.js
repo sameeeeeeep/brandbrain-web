@@ -501,27 +501,32 @@
       setProvider(window.claude);
       window.__switchboardRoutes?.mount(window.claude);
     };
+    function rehydrate() {
+      if (sessionStorage.getItem("sb:rehydrated")) return;
+      sessionStorage.setItem("sb:rehydrated", "1");
+      location.reload();
+    }
     let connected = false;
-    async function afterConnect(relay) {
+    async function afterConnect(relay, fresh = false) {
       if (connected) return;
       connected = true;
       wireProvider();
       const info = await storageInfo().catch(() => null);
       if (defaultFolder && info && info.autoAssigned) {
         const bound = await bindFolder(defaultFolder).catch(() => null);
-        if (bound && bound.count > 0 && !sessionStorage.getItem("sb:rehydrated")) {
-          sessionStorage.setItem("sb:rehydrated", "1");
-          location.reload();
+        if (bound && bound.count > 0) {
+          rehydrate();
           return;
         }
       }
       await publishBrands(relay);
+      if (fresh) rehydrate();
     }
     const dock = document.createElement("div");
     dock.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483000";
     document.body.appendChild(dock);
     mountConnect(dock, { scope, onConnect: (relay) => {
-      void afterConnect(relay);
+      void afterConnect(relay, true);
     } });
     (async () => {
       const r = await whenRelayReady(1500);
