@@ -100,7 +100,11 @@
         emitTransition(false);
         return render();
       }
-      const [user, project] = await Promise.all([r.identity(), r.context.active().catch(() => null)]);
+      const wantsContext = opts.context !== "none";
+      const [user, project] = await Promise.all([
+        r.identity(),
+        wantsContext ? r.context.active().catch(() => null) : Promise.resolve(null)
+      ]);
       if (destroyed || my !== seq)
         return;
       state = { kind: "connected", relay: r, user, project };
@@ -190,9 +194,10 @@
         av.append(img);
       } else
         av.textContent = name.charAt(0).toUpperCase();
+      const wantsContext = opts.context !== "none";
       const who = el("div", "who");
       who.append(el("div", "hi", `Hi ${name}`));
-      who.append(el("div", "proj", project ? project.name : "No context lent"));
+      who.append(el("div", "proj", wantsContext ? project ? project.name : "No context lent" : "Connected"));
       chip.append(av, who, el("span", "caret", "\u25BE"));
       chip.onclick = (e) => {
         e.stopPropagation();
@@ -202,12 +207,14 @@
       wrap.append(chip);
       if (menuOpen) {
         const menu = el("div", "menu");
-        menu.append(el("div", "lbl", "Working on"));
-        const row = el("button", "proj-row");
-        row.append(el("span", void 0, project ? project.name : "Choose a context"));
-        row.append(el("span", "go", project ? "Switch \u25B8" : "Choose \u25B8"));
-        row.onclick = doPick;
-        menu.append(row, el("div", "sep"));
+        if (wantsContext) {
+          menu.append(el("div", "lbl", "Working on"));
+          const row = el("button", "proj-row");
+          row.append(el("span", void 0, project ? project.name : "Choose a context"));
+          row.append(el("span", "go", project ? "Switch \u25B8" : "Choose \u25B8"));
+          row.onclick = doPick;
+          menu.append(row, el("div", "sep"));
+        }
         const dc = el("button", "item", "Disconnect this app");
         dc.onclick = doDisconnect;
         menu.append(dc);
@@ -530,7 +537,7 @@
     const dock = document.createElement("div");
     dock.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483000";
     document.body.appendChild(dock);
-    mountConnect(dock, { scope, onConnect: (relay) => {
+    mountConnect(dock, { scope, context: "none", onConnect: (relay) => {
       void afterConnect(relay, true);
     } });
     (async () => {
