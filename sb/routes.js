@@ -1955,6 +1955,7 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
   var runtime16 = "nodejs";
   var maxDuration15 = 240;
   var SYSTEM11 = `You are brandbrain's brand-cloning researcher. You read a REAL consumer brand's website and public information and extract its brand system into a structured starting point another founder can adapt. Extract ONLY from what is real on the site and in public info \u2014 never invent positioning, prices, product names, or colours you cannot actually see. Colours must be the brand's REAL hex values from the site. Sentence case, no emoji. Output ONLY the JSON object asked for, no prose, no code fences.`;
+  var SYSTEM_OWN = `You are brandbrain's brand-import researcher. The founder is pointing you at THEIR OWN brand's website: read it (and public info) and reconstruct their EXISTING brand system exactly as it is today \u2014 this becomes their brand's working foundation inside brandbrain, so fidelity beats flattery. Keep their real name, their real story, their real claims, prices, SKUs and colours; where the site is thin, extract less rather than embellish. Never invent positioning, prices, product names, or colours you cannot actually see. Colours must be the brand's REAL hex values from the site. Sentence case, no emoji. Output ONLY the JSON object asked for, no prose, no code fences.`;
   var s = (v) => {
     const t = String(v ?? "").trim();
     return t || void 0;
@@ -1986,15 +1987,20 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
       return Response.json({ error: "Invalid JSON" }, { status: 400 });
     }
     const raw = s(body.url);
-    if (!raw) return Response.json({ error: "Give a website link to clone." }, { status: 400 });
+    const own = body.own === true;
+    if (!raw) return Response.json({ error: own ? "Give your brand's website link." : "Give a website link to clone." }, { status: 400 });
     const domain5 = domainOf(raw);
     const url2 = /^https?:\/\//i.test(raw) ? raw : `https://${domain5}`;
     const market = s(body.market);
-    const prompt5 = `Clone the brand at this website: ${url2}
+    const prompt5 = (own ? `This is the founder's OWN existing brand: ${url2}
+
+Fetch that page (and a couple of its key pages \u2014 about, products, shop \u2014 if linked), and use public info, to reconstruct the brand's real system AS IT IS \u2014 their actual name, story, positioning, prices and range. This becomes their working foundation, not a starting point to adapt.
+
+` : `Clone the brand at this website: ${url2}
 
 Fetch that page (and a couple of its key pages \u2014 about, products, shop \u2014 if linked), and use public info, to read the brand's real system. Then extract it into a starting point another founder can adapt.
 
-` + (market ? `The founder is relaunching a version of this in this market: ${market}. Frame pricing/currency and context for that market where relevant.
+`) + (market ? `The founder is relaunching a version of this in this market: ${market}. Frame pricing/currency and context for that market where relevant.
 
 ` : "") + `Return ONLY this JSON:
 {
@@ -2015,7 +2021,7 @@ Fetch that page (and a couple of its key pages \u2014 about, products, shop \u20
 }
 
 Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are REAL (or omit that meta row). Do not invent SKUs, names, or claims. If the site can't be read, still give your best public-knowledge extraction, but never fabricate specifics.`;
-    const opts = { system: SYSTEM11, allowedTools: ["WebSearch", "WebFetch"], effort: "low", timeoutMs: 21e4 };
+    const opts = { system: own ? SYSTEM_OWN : SYSTEM11, allowedTools: ["WebSearch", "WebFetch"], effort: "low", timeoutMs: 21e4 };
     let text = await runClaude(prompt5, opts);
     let parsed = text ? extractJson(text) : null;
     if (!parsed) {
@@ -2051,7 +2057,7 @@ Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are RE
       if (!rawCard) return;
       const built = build(rawCard);
       const title = built ? s(built.title) : void 0;
-      if (built && title) locks[taskId] = { ...built, id: `${taskId}-clone`, title, reference: ref };
+      if (built && title) locks[taskId] = { ...built, id: `${taskId}-${own ? "import" : "clone"}`, title, reference: ref };
     };
     put("positioning", (r) => ({ title: s(r.title), body: s(r.body) }));
     put("audience", (r) => ({ title: s(r.title), body: s(r.body) }));
@@ -2065,7 +2071,7 @@ Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are RE
     put("range", (r) => ({ title: s(r.title), subtitle: s(r.subtitle), bullets: strArr(r.bullets) }));
     put(leadTaskId, (r) => ({ title: s(r.title), body: s(r.body) }));
     if (Object.keys(locks).length < 3) {
-      return Response.json({ error: "Couldn\u2019t extract enough from that brand \u2014 try a different link." }, { status: 503 });
+      return Response.json({ error: own ? "Couldn\u2019t read enough from your site \u2014 check the link (or try your about/shop page)." : "Couldn\u2019t extract enough from that brand \u2014 try a different link." }, { status: 503 });
     }
     return Response.json({ source, brief, path, gap, locks });
   }
