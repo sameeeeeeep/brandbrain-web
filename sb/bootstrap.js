@@ -490,6 +490,34 @@
       }
     };
   }
+  function ideaToContext(b) {
+    const L = b.locks || {};
+    const line = (c) => c && (c.title || c.name) || "";
+    const body = (c) => c && c.body || "";
+    const decisions = {};
+    for (const id of Object.keys(L)) {
+      const c = L[id];
+      if (c && (c.title || c.body)) decisions[id] = { title: line(c), body: body(c) };
+    }
+    return {
+      id: b.id,
+      // stable → re-publish updates in place
+      name: b.name || "Idea",
+      kind: "idea",
+      data: {
+        idea: b.idea || "",
+        category: b.template || "general",
+        market: b.brief && b.brief.market || "",
+        problem: body(L.problem) || line(L.problem),
+        insight: body(L.insight) || line(L.insight),
+        solution: line(L.solution),
+        model: line(L.model),
+        moat: line(L.moat),
+        decisions
+        // the whole playbook, for a downstream tool to reason over
+      }
+    };
+  }
   async function publishBrands(r) {
     try {
       const raw = await storageGet("workspace");
@@ -497,7 +525,7 @@
       const brands = Array.isArray(ws && ws.brands) ? ws.brands : [];
       let n = 0;
       for (const b of brands) if (b && b.name) {
-        await r.context.publish(brandToContext(b));
+        await r.context.publish(b.kind === "idea" ? ideaToContext(b) : brandToContext(b));
         n++;
       }
       return n;
