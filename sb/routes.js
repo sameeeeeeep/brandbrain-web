@@ -6,7 +6,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
       __defProp(target, name, { get: all[name], enumerable: true });
   };
 
-  // examples/adapter/claude.mjs
+  // ../adapter/claude.mjs
   var provider = typeof window !== "undefined" && window.claude && window.claude.isRelay ? window.claude : null;
   var _resolveReady;
   var _ready = new Promise((r) => {
@@ -26,12 +26,13 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     if (provider) return Promise.resolve(provider);
     return Promise.race([_ready, new Promise((r) => setTimeout(() => r(provider), timeoutMs))]);
   }
+  var wantsTools = (opts) => !!opts.mcp || !!(opts.allowedTools && opts.allowedTools.length);
   async function runClaude(prompt5, opts = {}) {
     if (!provider) return null;
     try {
       const r = await provider.request({
         method: "claude_complete",
-        params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: !!opts.mcp }
+        params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: wantsTools(opts) }
       });
       return typeof r?.text === "string" ? r.text : null;
     } catch {
@@ -67,7 +68,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
         };
         provider.on("delta", onDelta);
         try {
-          const res = await provider.request({ method: "claude_stream", params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: !!opts.mcp } });
+          const res = await provider.request({ method: "claude_stream", params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: wantsTools(opts) } });
           streamId = res?.streamId;
         } catch {
           provider.removeListener?.("delta", onDelta);
@@ -91,7 +92,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     }
   }
 
-  // examples/adapter/router.mjs
+  // ../adapter/router.mjs
   function createApp(routes2, { prefix = "/api" } = {}) {
     return {
       prefix,
@@ -133,7 +134,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     };
   }
 
-  // ../brandbrain/app/api/ask/route.ts
+  // ../../../brandbrain/app/api/ask/route.ts
   var route_exports = {};
   __export(route_exports, {
     POST: () => POST,
@@ -141,7 +142,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     runtime: () => runtime
   });
 
-  // examples/brandbrain-port/.build/lib/seed/brands.ts
+  // .build/lib/seed/brands.ts
   var part = (key, label, value) => ({ key, label, value });
   var brands = [
     {
@@ -437,7 +438,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     return brands.find((b) => b.slug === slug);
   }
 
-  // ../brandbrain/app/api/ask/route.ts
+  // ../../../brandbrain/app/api/ask/route.ts
   var runtime = "nodejs";
   var maxDuration = 120;
   var LIBRARY = brands.map((b) => `- ${b.name} (${b.category}, ${b.market}): ${b.positioning} Steal: ${b.steal}`).join("\n");
@@ -488,7 +489,7 @@ A: ${h.a}`);
     });
   }
 
-  // ../brandbrain/app/api/img/route.ts
+  // ../../../brandbrain/app/api/img/route.ts
   var route_exports2 = {};
   __export(route_exports2, {
     GET: () => GET,
@@ -540,7 +541,7 @@ A: ${h.a}`);
     }
   }
 
-  // ../brandbrain/app/api/os/ads/route.ts
+  // ../../../brandbrain/app/api/os/ads/route.ts
   var route_exports3 = {};
   __export(route_exports3, {
     POST: () => POST2,
@@ -633,7 +634,7 @@ A: ${h.a}`);
     return Response.json({ ads });
   }
 
-  // ../brandbrain/app/api/os/briefing/route.ts
+  // ../../../brandbrain/app/api/os/briefing/route.ts
   var route_exports4 = {};
   __export(route_exports4, {
     POST: () => POST3,
@@ -670,12 +671,13 @@ A: ${h.a}`);
 ${facts}
 
 Write the briefing.`;
-    const briefing = await runClaude(prompt5, { system: SYSTEM3(name), effort: "low", timeoutMs: 6e4 });
+    const grounded = body.grounded === true;
+    const briefing = await runClaude(prompt5, { system: SYSTEM3(name), allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0, effort: "low", timeoutMs: grounded ? 14e4 : 6e4 });
     if (!briefing) return Response.json({ error: "Couldn\u2019t read the brand right now \u2014 try again." }, { status: 503 });
-    return Response.json({ briefing: briefing.trim() });
+    return Response.json({ briefing: briefing.trim(), grounded });
   }
 
-  // ../brandbrain/app/api/os/draft/route.ts
+  // ../../../brandbrain/app/api/os/draft/route.ts
   var route_exports5 = {};
   __export(route_exports5, {
     POST: () => POST4,
@@ -725,7 +727,7 @@ ${instruction}${redirect}`;
     return Response.json({ draft: draft.trim() });
   }
 
-  // ../brandbrain/app/api/os/gmail/route.ts
+  // ../../../brandbrain/app/api/os/gmail/route.ts
   var route_exports6 = {};
   __export(route_exports6, {
     POST: () => POST5,
@@ -787,7 +789,7 @@ On failure return exactly: {"error":"<short honest reason>"}`;
     return Response.json({ draftId });
   }
 
-  // ../brandbrain/app/api/os/investors/route.ts
+  // ../../../brandbrain/app/api/os/investors/route.ts
   var route_exports7 = {};
   __export(route_exports7, {
     POST: () => POST6,
@@ -888,7 +890,7 @@ Return ONLY this JSON:
     return Response.json({ investors });
   }
 
-  // ../brandbrain/app/api/os/network/route.ts
+  // ../../../brandbrain/app/api/os/network/route.ts
   var route_exports8 = {};
   __export(route_exports8, {
     POST: () => POST7,
@@ -964,10 +966,12 @@ Real or absent: every name, handle and domain must be one you are confident is r
       return Response.json({ error: "Invalid JSON" }, { status: 400 });
     }
     const brand = body.brand ?? {};
+    const grounded = body.grounded === true;
     const opts = {
       system: SYSTEM6,
+      allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0,
       effort: "low",
-      timeoutMs: 9e4
+      timeoutMs: grounded ? 14e4 : 6e4
     };
     const p = prompt(brand, body.steer);
     let creators = [];
@@ -990,10 +994,10 @@ Real or absent: every name, handle and domain must be one you are confident is r
         { status: 503 }
       );
     }
-    return Response.json({ creators, brands: brands2 });
+    return Response.json({ creators, brands: brands2, grounded });
   }
 
-  // ../brandbrain/app/api/os/pipeline/route.ts
+  // ../../../brandbrain/app/api/os/pipeline/route.ts
   var route_exports9 = {};
   __export(route_exports9, {
     POST: () => POST8,
@@ -1049,10 +1053,11 @@ Real or absent: every name, handle and domain must be one you are confident is r
       STAGE_INSTRUCTION[stage] + redirect,
       `Return ONLY this JSON: {"items":[{"title":"...","desc":"..."}]}. Keep each title short and each desc to one or two lines \u2014 no padding.`
     ].filter(Boolean).join("\n\n");
+    const grounded = body.grounded === true;
     let parsed = null;
     for (let attempt = 0; attempt < 3 && !parsed; attempt++) {
       const prompt5 = attempt === 0 ? base : base + "\n\nReturn ONLY the JSON object \u2014 no prose, no code fences, no trailing text.";
-      const text = await runClaude(prompt5, { system: SYSTEM7, effort: "low", timeoutMs: 9e4 });
+      const text = await runClaude(prompt5, { system: SYSTEM7, allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0, effort: "low", timeoutMs: grounded ? 14e4 : 6e4 });
       parsed = text ? extractJson(text) : null;
     }
     if (!parsed) return Response.json({ error: "Couldn\u2019t generate that \u2014 try again." }, { status: 503 });
@@ -1062,7 +1067,7 @@ Real or absent: every name, handle and domain must be one you are confident is r
     return Response.json({ items });
   }
 
-  // ../brandbrain/app/api/os/pulse/route.ts
+  // ../../../brandbrain/app/api/os/pulse/route.ts
   var route_exports10 = {};
   __export(route_exports10, {
     POST: () => POST9,
@@ -1109,7 +1114,7 @@ If the store is unreachable or has no data, return {"pulse":null}.`;
     });
   }
 
-  // ../brandbrain/app/api/os/report/route.ts
+  // ../../../brandbrain/app/api/os/report/route.ts
   var route_exports11 = {};
   __export(route_exports11, {
     POST: () => POST10,
@@ -1206,7 +1211,7 @@ ${spec}${redirect}`;
     return Response.json({ report: text.trim() });
   }
 
-  // ../brandbrain/app/api/research/brand/route.ts
+  // ../../../brandbrain/app/api/research/brand/route.ts
   var route_exports12 = {};
   __export(route_exports12, {
     POST: () => POST11,
@@ -1214,7 +1219,7 @@ ${spec}${redirect}`;
     runtime: () => runtime12
   });
 
-  // examples/brandbrain-port/shims/node-fs.mjs
+  // shims/node-fs.mjs
   var mem = /* @__PURE__ */ new Map();
   async function mkdir() {
   }
@@ -1228,12 +1233,12 @@ ${spec}${redirect}`;
     mem.set(p, data);
   }
 
-  // examples/brandbrain-port/shims/node-path.mjs
+  // shims/node-path.mjs
   function join(...parts) {
     return parts.filter((p) => p != null && p !== "").join("/").replace(/\/{2,}/g, "/");
   }
 
-  // examples/brandbrain-port/.build/lib/research.ts
+  // .build/lib/research.ts
   var CACHE_DIR = join(process.cwd(), ".cache", "research");
   var SYSTEM9 = `You are brandbrain's competitor-teardown researcher. You research REAL consumer (D2C) brands and report only what you can actually support.
 
@@ -1307,7 +1312,7 @@ Hard rules:
     return data;
   }
 
-  // ../brandbrain/app/api/research/brand/route.ts
+  // ../../../brandbrain/app/api/research/brand/route.ts
   var runtime12 = "nodejs";
   var maxDuration11 = 160;
   async function POST11(req2) {
@@ -1332,7 +1337,7 @@ Hard rules:
     return Response.json(research);
   }
 
-  // ../brandbrain/app/api/studio/analogue/route.ts
+  // ../../../brandbrain/app/api/studio/analogue/route.ts
   var route_exports13 = {};
   __export(route_exports13, {
     POST: () => POST12,
@@ -1381,10 +1386,12 @@ Return ONLY this JSON:
 {"brand":"the real cross-category brand","category":"its own (different) category","domain":"brand.com","thesis":"a one-liner: 'be the <brand> of <this category>' phrased naturally","eli5":"THE SAME idea in plain words, self-contained, for a founder who has NEVER heard of this brand: in 1-2 sentences say what that brand actually did/became, then what that means THIS brand should do. No jargon, no insider terms, no name-dropping without explaining. A smart 12-year-old should get it.","whyItMatches":["2-4 SHORT reasons the structures rhyme \u2014 punchy phrases, max ~14 words each, NOT paragraphs"],"moves":[{"play":"the move that worked, in a short phrase","translated":"what it means for this brand, ONE tight sentence"}],"confidence":"strong|loose|none"}
 
 Give 3-4 moves. Use confidence "strong" only for a genuine structural rhyme; "loose" if partial; "none" (and leave brand empty) if there is no honest analogue \u2014 do not force one.`;
-    let text = await runClaude(prompt5, { system: SYSTEM10, effort: "low", timeoutMs: 12e4 });
+    const grounded = body.grounded === true;
+    const opts = { system: SYSTEM10, allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0, effort: "low", timeoutMs: grounded ? 14e4 : 6e4 };
+    let text = await runClaude(prompt5, opts);
     let parsed = text ? extractJson(text) : null;
     if (!parsed) {
-      text = await runClaude(prompt5 + "\n\nReturn ONLY the JSON object \u2014 no prose, no code fences.", { system: SYSTEM10, effort: "low", timeoutMs: 12e4 });
+      text = await runClaude(prompt5 + "\n\nReturn ONLY the JSON object \u2014 no prose, no code fences.", opts);
       parsed = text ? extractJson(text) : null;
     }
     if (!parsed) return Response.json({ error: "Couldn\u2019t reason an analogue" }, { status: 503 });
@@ -1407,10 +1414,10 @@ Give 3-4 moves. Use confidence "strong" only for a genuine structural rhyme; "lo
     if (!analogue.moves.length || !analogue.whyItMatches.length) {
       return Response.json({ analogue: null });
     }
-    return Response.json({ analogue });
+    return Response.json({ analogue: { ...analogue, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/brief/route.ts
+  // ../../../brandbrain/app/api/studio/brief/route.ts
   var route_exports14 = {};
   __export(route_exports14, {
     POST: () => POST13,
@@ -1418,7 +1425,7 @@ Give 3-4 moves. Use confidence "strong" only for a genuine structural rhyme; "lo
     runtime: () => runtime14
   });
 
-  // examples/brandbrain-port/shims/claude-session.mjs
+  // shims/claude-session.mjs
   var STUDIO_SYSTEM = `You are brandbrain, a launch & growth strategist for consumer (D2C) brands, running a guided brand build for a founder in one continuous conversation.
 
 Across this conversation you expand their idea into a brief, then generate OPTIONS for each piece of the brand \u2014 name, positioning, audience, voice, visual identity, competitors, pricing, product range, suppliers \u2014 as structured cards they pick from. Each turn tells you exactly what to produce and the JSON shape to return.
@@ -1449,7 +1456,7 @@ Rules:
     });
   }
 
-  // ../brandbrain/app/api/studio/brief/route.ts
+  // ../../../brandbrain/app/api/studio/brief/route.ts
   var runtime14 = "nodejs";
   var maxDuration13 = 180;
   async function POST13(req2) {
@@ -1495,7 +1502,7 @@ Rules:
     return Response.json({ brief });
   }
 
-  // ../brandbrain/app/api/studio/canvas/route.ts
+  // ../../../brandbrain/app/api/studio/canvas/route.ts
   var route_exports15 = {};
   __export(route_exports15, {
     POST: () => POST14,
@@ -1503,7 +1510,7 @@ Rules:
     runtime: () => runtime15
   });
 
-  // examples/brandbrain-port/.build/lib/studio/spec.ts
+  // .build/lib/studio/spec.ts
   function gapScore(c) {
     const s2 = 0.3 * c.demand + 0.25 * c.sparsity + 0.25 * c.vulnerability + 0.2 * c.feasibility - 0.2 * c.risk;
     return Math.max(0, Math.min(1, s2));
@@ -1817,7 +1824,7 @@ Rules:
   var getTask = (id) => TASK_BY_ID[id];
   var DEFAULT_SEQUENCE = TASKS.map((t) => t.id);
 
-  // ../brandbrain/app/api/studio/canvas/route.ts
+  // ../../../brandbrain/app/api/studio/canvas/route.ts
   var runtime15 = "nodejs";
   var maxDuration14 = 240;
   var STUDIO_SYSTEM2 = `You are brandbrain, a market analyst for consumer (D2C) founders. You map a market from a one-line idea so the founder understands the field before deciding anything. Be sharp and concrete. Every brand, domain, price and signal must be REAL \u2014 never invent a brand, domain, url or statistic; if you can't verify a number, describe it qualitatively. Sentence case, no emoji, no hashtags. Output ONLY the JSON asked for.`;
@@ -1922,10 +1929,12 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
     }
     const idea = (body.idea ?? body.brief?.productIdea ?? "").trim();
     if (!idea) return Response.json({ error: "Describe your idea" }, { status: 400 });
+    const grounded = body.grounded === true;
     const opts = {
       system: STUDIO_SYSTEM2,
+      allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0,
       effort: "low",
-      timeoutMs: 14e4
+      timeoutMs: grounded ? 14e4 : 6e4
     };
     const p = prompt3(idea, body.brief, body.steer);
     let text = await runClaude(p, opts);
@@ -1942,10 +1951,10 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
         { status: 503 }
       );
     }
-    return Response.json({ canvas });
+    return Response.json({ canvas: { ...canvas, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/clone/route.ts
+  // ../../../brandbrain/app/api/studio/clone/route.ts
   var route_exports16 = {};
   __export(route_exports16, {
     POST: () => POST15,
@@ -2076,7 +2085,7 @@ Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are RE
     return Response.json({ source, brief, path, gap, locks });
   }
 
-  // ../brandbrain/app/api/studio/connect/route.ts
+  // ../../../brandbrain/app/api/studio/connect/route.ts
   var route_exports17 = {};
   __export(route_exports17, {
     POST: () => POST16,
@@ -2150,7 +2159,7 @@ Reply with just "ok".`
     return Response.json({ connected: parsed.connected, brief });
   }
 
-  // ../brandbrain/app/api/studio/deepen/route.ts
+  // ../../../brandbrain/app/api/studio/deepen/route.ts
   var route_exports18 = {};
   __export(route_exports18, {
     POST: () => POST17,
@@ -2243,7 +2252,7 @@ Use confidence "high" only for a clearly-sourced fact; "low" for a single weak s
     return Response.json({ profile });
   }
 
-  // ../brandbrain/app/api/studio/end/route.ts
+  // ../../../brandbrain/app/api/studio/end/route.ts
   var route_exports19 = {};
   __export(route_exports19, {
     POST: () => POST18,
@@ -2261,7 +2270,7 @@ Use confidence "high" only for a clearly-sourced fact; "low" for a single weak s
     return Response.json({ ok: true });
   }
 
-  // ../brandbrain/app/api/studio/gaps/route.ts
+  // ../../../brandbrain/app/api/studio/gaps/route.ts
   var route_exports20 = {};
   __export(route_exports20, {
     POST: () => POST19,
@@ -2313,10 +2322,12 @@ Propose 3 fresh openings (white space) a new brand could own \u2014 each grounde
 
 For each, estimate honestly (0\u20131): demand (rising?), sparsity (unoccupied?), vulnerability (incumbents weak?), feasibility (buildable?), risk (regulatory/fad?).
 Return ONLY: {"gaps":[{"title":"a 2-5 word opening","rationale":"one line why it's open","demand":0.0-1.0,"sparsity":0.0-1.0,"vulnerability":0.0-1.0,"feasibility":0.0-1.0,"risk":0.0-1.0}]}`;
-    let text = await runClaude(prompt5, { system: SYSTEM13, effort: "low", timeoutMs: 12e4 });
+    const grounded = body.grounded === true;
+    const opts = { system: SYSTEM13, allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0, effort: "low", timeoutMs: grounded ? 14e4 : 6e4 };
+    let text = await runClaude(prompt5, opts);
     let parsed = text ? extractJson(text) : null;
     if (!parsed) {
-      text = await runClaude(prompt5 + "\n\nReturn ONLY the JSON object \u2014 nothing else.", { system: SYSTEM13, effort: "low", timeoutMs: 12e4 });
+      text = await runClaude(prompt5 + "\n\nReturn ONLY the JSON object \u2014 nothing else.", opts);
       parsed = text ? extractJson(text) : null;
     }
     if (!parsed) return Response.json({ error: "Couldn\u2019t generate openings" }, { status: 503 });
@@ -2337,7 +2348,7 @@ Return ONLY: {"gaps":[{"title":"a 2-5 word opening","rationale":"one line why it
     return Response.json({ gaps });
   }
 
-  // ../brandbrain/app/api/studio/inspiration/route.ts
+  // ../../../brandbrain/app/api/studio/inspiration/route.ts
   var route_exports21 = {};
   __export(route_exports21, {
     POST: () => POST20,
@@ -2387,7 +2398,7 @@ Return ONLY: {"brands":[{"brand":"...","domain":"brand.com","take":"how they did
     return Response.json({ brands: brands2 });
   }
 
-  // ../brandbrain/app/api/studio/path-suggest/route.ts
+  // ../../../brandbrain/app/api/studio/path-suggest/route.ts
   var route_exports22 = {};
   __export(route_exports22, {
     POST: () => POST21,
@@ -2442,7 +2453,7 @@ Return ONLY: {"recommended":"founder|story|ingredient|problem","notes":{"founder
     return Response.json({ recommended, notes });
   }
 
-  // ../brandbrain/app/api/studio/route.ts
+  // ../../../brandbrain/app/api/studio/route.ts
   var route_exports23 = {};
   __export(route_exports23, {
     POST: () => POST22,
@@ -2601,7 +2612,7 @@ Return ONLY: {"recommended":"founder|story|ingredient|problem","notes":{"founder
     return Response.json({ cards });
   }
 
-  // ../brandbrain/app/api/studio/shelf/route.ts
+  // ../../../brandbrain/app/api/studio/shelf/route.ts
   var route_exports24 = {};
   __export(route_exports24, {
     POST: () => POST23,
@@ -2696,7 +2707,7 @@ Aim for 8-12 real products spanning the price range and the different marketplac
     return Response.json({ products });
   }
 
-  // ../brandbrain/app/api/studio/store/route.ts
+  // ../../../brandbrain/app/api/studio/store/route.ts
   var route_exports25 = {};
   __export(route_exports25, {
     POST: () => POST24,
@@ -2756,7 +2767,7 @@ Call get-new-store-previews once with those fields + userUnderstandsNewStoreOnly
     return Response.json({ previews });
   }
 
-  // ../brandbrain/app/api/studio/story/route.ts
+  // ../../../brandbrain/app/api/studio/story/route.ts
   var route_exports26 = {};
   __export(route_exports26, {
     POST: () => POST25,
@@ -2821,7 +2832,7 @@ Return ONLY the JSON.`;
     return Response.json({ done: true, summary: str4(parsed.summary), brief, gap });
   }
 
-  // ../brandbrain/app/api/studio/trends/route.ts
+  // ../../../brandbrain/app/api/studio/trends/route.ts
   var route_exports27 = {};
   __export(route_exports27, {
     POST: () => POST26,
@@ -2893,7 +2904,8 @@ Rules: 4-6 trends, each genuinely distinct and specific to this category (not "c
     const idea = (body.idea ?? body.brief?.productIdea ?? "").trim();
     if (!idea) return Response.json({ error: "Describe your idea" }, { status: 400 });
     const category = body.canvas?.category?.name || body.brief?.category || "this category";
-    const opts = { system: SYSTEM17, effort: "low", timeoutMs: 14e4 };
+    const grounded = body.grounded === true;
+    const opts = { system: SYSTEM17, allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0, effort: "low", timeoutMs: grounded ? 14e4 : 6e4 };
     const p = prompt4(idea, body.canvas, body.brief, body.steer);
     let text = await runClaude(p, opts);
     let parsed = text ? extractJson(text) : null;
@@ -2906,10 +2918,10 @@ Rules: 4-6 trends, each genuinely distinct and specific to this category (not "c
     if (!trends) {
       return Response.json({ error: "Couldn\u2019t read the category trends \u2014 is Claude Code signed in?" }, { status: 503 });
     }
-    return Response.json({ trends });
+    return Response.json({ trends: { ...trends, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/validate/route.ts
+  // ../../../brandbrain/app/api/studio/validate/route.ts
   var route_exports28 = {};
   __export(route_exports28, {
     POST: () => POST27,
@@ -3036,7 +3048,7 @@ Each fact "label" is a SHORT tag of 1-4 words (e.g. "TAM", "Category CAGR", "IRI
     return Response.json({ validation });
   }
 
-  // ../brandbrain/app/api/studio/vc-lens/route.ts
+  // ../../../brandbrain/app/api/studio/vc-lens/route.ts
   var route_exports29 = {};
   __export(route_exports29, {
     POST: () => POST28,
@@ -3117,7 +3129,7 @@ Return ONLY this JSON:
     return Response.json({ lens });
   }
 
-  // ../brandbrain/app/api/studio/visual/route.ts
+  // ../../../brandbrain/app/api/studio/visual/route.ts
   var route_exports30 = {};
   __export(route_exports30, {
     POST: () => POST29,
@@ -3191,7 +3203,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     return Response.json({ url: url2, kind, jobId });
   }
 
-  // ../brandbrain/app/api/vendors/route.ts
+  // ../../../brandbrain/app/api/vendors/route.ts
   var route_exports31 = {};
   __export(route_exports31, {
     GET: () => GET2,
@@ -3200,7 +3212,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     runtime: () => runtime31
   });
 
-  // examples/adapter/claude_storage.mjs
+  // ../adapter/claude_storage.mjs
   var WORKSPACE_KEY = "workspace";
   var VENDORS_KEY = "vendors";
   async function req(params) {
@@ -3274,7 +3286,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // ../brandbrain/app/api/vendors/route.ts
+  // ../../../brandbrain/app/api/vendors/route.ts
   var runtime31 = "nodejs";
   var dynamic2 = "force-dynamic";
   async function GET2() {
@@ -3297,7 +3309,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // ../brandbrain/app/api/workspace/route.ts
+  // ../../../brandbrain/app/api/workspace/route.ts
   var route_exports32 = {};
   __export(route_exports32, {
     GET: () => GET3,
@@ -3328,7 +3340,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // examples/brandbrain-port/routes-entry.mjs
+  // routes-entry.mjs
   var routes = {
     "/api/ask": route_exports,
     "/api/img": route_exports2,
