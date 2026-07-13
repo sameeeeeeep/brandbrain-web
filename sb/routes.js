@@ -1720,6 +1720,106 @@ Rules:
         { id: "channels", phase: "grow", title: "Channels", blurb: "Where to sell beyond your own store.", fields: "title = a channel (e.g. quick-commerce, marketplace, wholesale, retail, subscription); body = the fit and the trade-off; reference = a real brand that won on this channel + domain. Consider how the channel fit differs across the market's sub-categories.", web: false, select: "many", count: 4, deps: ["positioning", "audience"], model: FAST },
         { id: "events", phase: "grow", title: "Events & activations", blurb: "Ways to show up in the real world.", fields: "title = an event or activation idea; body = what it is and why it fits the brand; reference = a real brand that did something like it + domain.", web: false, select: "many", count: 3, deps: ["positioning", "audience"], model: FAST }
       ]
+    },
+    // ───────────────────────── ideabrain · studio "idea" ─────────────────────────
+    // The decision POOL for an IDEA (a startup/product thesis). Templates (IDEA_TEMPLATES, below) pick
+    // an ordered subset per category, so a marketplace idea walks different decisions than a consumer
+    // app or a retail concept. Same generic /api/studio engine — new decisions need no new routes.
+    // Deps are kept shallow (≤ "problem", which every template includes first) so any template is
+    // dependency-safe regardless of which tasks it selects. Grounded tasks (web:true) pull live signal.
+    {
+      id: "idea-thesis",
+      name: "Thesis",
+      icon: "target",
+      stage: "Shape",
+      studio: "idea",
+      tasks: [
+        { id: "problem", phase: "idea-thesis", title: "The problem", blurb: "Sharp, real ways to frame the pain this idea removes.", fields: "title = the problem in a phrase; body = who feels it and how acute it is, in plain words a stranger instantly gets \u2014 no jargon; bullets = [the concrete moment the pain bites].", web: false, select: "one", count: 4, deps: [], model: FAST },
+        { id: "who", phase: "idea-thesis", title: "Beachhead user", blurb: "The specific first user to win \u2014 not everyone, someone.", fields: "title = the first user in a phrase; body = who they are and why they're the right wedge to start with; chips = 2-4 short segment tags.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "insight", phase: "idea-thesis", title: "The insight", blurb: "The non-obvious reason this can work now when the obvious version hasn't.", fields: "title = the insight in a phrase; body = the wedge \u2014 the non-obvious thing that's true here that most people miss, one tight sentence; bullets = [the assumption most people get wrong].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "whynow", phase: "idea-thesis", title: "Why now", blurb: "The shift that makes this newly possible \u2014 grounded in what's actually changed.", fields: "title = the enabling shift in a phrase; body = the tech, behaviour or regulatory change that makes this possible NOW and wasn't before; bullets = [a concrete, recent signal the shift is real].", web: true, select: "one", count: 4, deps: [], model: FAST },
+        { id: "alternatives", phase: "idea-thesis", title: "Alternatives", blurb: "What people actually do today \u2014 real incumbents, workarounds and substitutes.", fields: "Each card is a REAL current alternative (an incumbent product, a manual workaround, or a substitute). title = the alternative; reference = the real product/company + its domain; body = where it falls short for this user. Use only real, verifiable options.", web: true, select: "many", count: 5, deps: ["problem"] }
+      ]
+    },
+    {
+      id: "idea-market",
+      name: "Market",
+      icon: "compass",
+      stage: "Shape",
+      studio: "idea",
+      tasks: [
+        // marketplace / platform
+        { id: "mkt-supply", phase: "idea-market", title: "Supply side", blurb: "Who provides the inventory or service \u2014 and the wedge to get them on first.", fields: "title = the supplier in a phrase; body = who supplies the inventory/service and the concrete wedge to onboard the first ones; bullets = [why an early supplier says yes before there's demand].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "mkt-demand", phase: "idea-market", title: "Demand side", blurb: "Who buys, and why they'd switch from what they do today.", fields: "title = the buyer in a phrase; body = who buys, the job they hire the marketplace for, and why they'd switch from today's option; chips = 2-4 buyer segment tags.", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // b2b saas
+        { id: "saas-icp", phase: "idea-market", title: "ICP", blurb: "The ideal customer profile, sharp \u2014 size, role, trigger.", fields: "title = the ICP in a phrase; body = the company size, the role who feels the pain, and the trigger that makes them buy; chips = 2-4 firmographic tags.", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "saas-wedge", phase: "idea-market", title: "Wedge", blurb: "The narrow entry point that lands the first deals before you expand.", fields: "title = the wedge in a phrase; body = the sharp, narrow first use-case that closes deals fast; bullets = [why they'd buy this one thing right now].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // feature of an existing product
+        { id: "feat-users", phase: "idea-market", title: "Which users", blurb: "The slice of the existing base this feature serves first.", fields: "title = the user segment in a phrase; body = the slice of the EXISTING product's users this serves first, and why them; chips = 2-4 segment tags.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "feat-fit", phase: "idea-market", title: "Product fit", blurb: "Why this belongs in the existing product \u2014 not just 'nice to have'.", fields: "title = the strategic fit in a phrase; body = how it fits the existing product's core job and roadmap, and the behaviour it plugs into; bullets = [the existing behaviour it extends].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // retail / physical space
+        { id: "retail-concept", phase: "idea-market", title: "Concept & format", blurb: "The store concept and why it's worth a physical visit.", fields: "title = the format in a phrase; body = the concept and the reason it's worth visiting in person in an online world; bullets = [the experience you can't get online].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "retail-location", phase: "idea-market", title: "Location strategy", blurb: "Where, the catchment, and why footfall there converts.", fields: "title = the location strategy in a phrase; body = the site type and catchment you target and why footfall there converts; chips = 2-4 site-type cues.", web: true, select: "one", count: 4, deps: ["problem"], model: FAST }
+      ]
+    },
+    {
+      id: "idea-plan",
+      name: "Plan",
+      icon: "git-branch",
+      stage: "Shape",
+      studio: "idea",
+      tasks: [
+        // shared
+        { id: "solution", phase: "idea-plan", title: "MVP shape", blurb: "The smallest thing that proves the thesis \u2014 not the full vision.", fields: "title = the MVP in 2-4 words; body = the smallest build that would prove the thesis, in plain words; bullets = [the one feature it cannot ship without].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "model", phase: "idea-plan", title: "Business model", blurb: "How it makes money \u2014 who pays, for what.", fields: "title = the model in a phrase; body = the revenue mechanism in one clear sentence; meta = [{label:'who pays', value:'for what, roughly how much'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "gtm", phase: "idea-plan", title: "First 100 users", blurb: "The concrete go-to-market wedge \u2014 one channel, not 'marketing'.", fields: "title = the go-to-market wedge in a phrase; body = how you get the first 100 users through ONE concrete channel; bullets = [the specific first move you'd make on monday].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "moat", phase: "idea-plan", title: "Moat", blurb: "Why this gets harder to copy as it grows.", fields: "title = the defensibility in a phrase; body = why this compounds and gets harder to copy over time (network effects, data, brand, switching cost); bullets = [the thing that compounds].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // marketplace / platform
+        { id: "mkt-coldstart", phase: "idea-plan", title: "Cold start", blurb: "Which side you seed first, and how you beat the chicken-and-egg.", fields: "title = the cold-start move in a phrase; body = which side you seed first and the concrete tactic to break the chicken-and-egg; bullets = [the single-player value before the network exists].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "mkt-liquidity", phase: "idea-plan", title: "Path to liquidity", blurb: "The narrow slice where you concentrate to actually transact.", fields: "title = the beachhead slice in a phrase; body = the narrow geo/vertical where you concentrate density until transactions reliably happen; bullets = [what 'liquid' looks like here].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "mkt-take", phase: "idea-plan", title: "Take rate & model", blurb: "How the marketplace earns per transaction.", fields: "title = the monetization in a phrase; body = how it earns per transaction (take rate, listing fee, subscription) and why that's right here; meta = [{label:'take', value:'the rate/fee and who pays it'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "mkt-trust", phase: "idea-plan", title: "Trust & safety", blurb: "How strangers transact safely \u2014 quality, disputes, guarantees.", fields: "title = the trust mechanism in a phrase; body = how you make strangers transact safely \u2014 quality control, reviews, guarantees, disputes; bullets = [the biggest trust risk and how you contain it].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // consumer app
+        { id: "app-loop", phase: "idea-plan", title: "Core loop", blurb: "The repeated action that delivers value every session.", fields: "title = the core loop in a phrase; body = the repeated action a user takes that delivers value each session (trigger \u2192 action \u2192 reward); bullets = [the single action the whole app orbits].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "app-retention", phase: "idea-plan", title: "Retention hook", blurb: "What genuinely brings them back tomorrow \u2014 not a push notification.", fields: "title = the retention hook in a phrase; body = the real reason a user returns tomorrow and next week; bullets = [the reason to return that compounds with use].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "app-platform", phase: "idea-plan", title: "Platform & surface", blurb: "iOS, Android, web \u2014 and why that surface first.", fields: "title = the platform in a phrase; body = the surface(s) you build first and why that fits this user and use case; chips = 2-4 surface cues.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "app-distribution", phase: "idea-plan", title: "Distribution", blurb: "The growth engine \u2014 virality, App Store, content, referral.", fields: "title = the growth wedge in a phrase; body = the specific distribution engine and why it's cheap right now; bullets = [the first channel and the move to test it].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "app-monetization", phase: "idea-plan", title: "Monetization", blurb: "Free, subscription, in-app or ads \u2014 and when you charge.", fields: "title = the model in a phrase; body = what you charge for and at what moment; meta = [{label:'charges', value:'who pays what, when'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // feature of an existing product
+        { id: "feat-adoption", phase: "idea-plan", title: "Adoption", blurb: "How the existing base discovers and actually uses it.", fields: "title = the adoption wedge in a phrase; body = how you drive uptake within the current base (surfacing, defaults, onboarding); bullets = [the moment you introduce it].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "feat-buildbuy", phase: "idea-plan", title: "Build vs buy", blurb: "Build in-house, buy/integrate, or partner \u2014 and why.", fields: "title = the call in a phrase; body = build, buy or partner and the honest reason; meta = [{label:'lean', value:'build / buy / partner + why'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // retail
+        { id: "retail-unit", phase: "idea-plan", title: "Unit economics", blurb: "The per-store maths: footfall \u2192 conversion \u2192 basket \u2192 contribution.", fields: "title = the unit economics in a phrase; body = the per-store maths after rent and staff \u2014 footfall, conversion, basket, contribution; meta = [{label:'per store', value:'rough monthly revenue vs cost'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "retail-ops", phase: "idea-plan", title: "Ops & supply", blurb: "How the store actually runs \u2014 staffing, inventory, supply.", fields: "title = the ops model in a phrase; body = how the store runs day to day and the hard part; bullets = [the operational risk that bites at scale].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "retail-footfall", phase: "idea-plan", title: "Driving footfall", blurb: "The local go-to-market that fills the store.", fields: "title = the footfall engine in a phrase; body = the local GTM that fills the store \u2014 launch, community, partnerships, digital-to-store; bullets = [the first-week move].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "retail-expansion", phase: "idea-plan", title: "Expansion model", blurb: "How one location becomes many \u2014 or deliberately stays few.", fields: "title = the expansion model in a phrase; body = the repeatable playbook and capital per store to go from one to many; bullets = [what must be true to open store #2].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // b2b saas
+        { id: "saas-motion", phase: "idea-plan", title: "Sales motion", blurb: "Product-led, sales-led or hybrid \u2014 and why for this ICP.", fields: "title = the motion in a phrase; body = PLG, sales-led or hybrid and why it fits this ICP and price point; bullets = [the first repeatable way you close].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "saas-pricing", phase: "idea-plan", title: "Pricing & packaging", blurb: "The value metric you charge on, and the tiers.", fields: "title = the pricing in a phrase; body = the value metric (seats, usage, outcomes) and the tiers; meta = [{label:'charges', value:'the metric + rough price'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "saas-integration", phase: "idea-plan", title: "Integration moat", blurb: "The data or workflow lock-in that compounds.", fields: "title = the moat in a phrase; body = the data, workflow or integration lock-in that raises switching cost over time; bullets = [what gets stickier with use].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "saas-expand", phase: "idea-plan", title: "Land & expand", blurb: "How accounts grow after the first deal \u2014 the path to >100% NRR.", fields: "title = the expansion motion in a phrase; body = how an account grows (seats, use cases, departments) toward net revenue retention above 100%; bullets = [the natural second sale].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // hardware / physical product
+        { id: "hw-bom", phase: "idea-plan", title: "Unit cost (BOM)", blurb: "The bill of materials and landed cost per unit.", fields: "title = the cost story in a phrase; body = the rough landed cost per unit and the biggest cost driver; meta = [{label:'unit cost', value:'rough COGS per unit'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "hw-manufacturing", phase: "idea-plan", title: "Manufacturing", blurb: "How and where it's made, and the hardest part to get right.", fields: "title = the make story in a phrase; body = how and where it's made, the supply chain, and the hardest part; bullets = [the manufacturing risk].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "hw-margin", phase: "idea-plan", title: "Margin & price", blurb: "Retail price vs unit cost \u2014 whether the maths works.", fields: "title = the margin in a phrase; body = the retail price vs unit cost and the honest gross margin; meta = [{label:'price \u2192 margin', value:'price and rough gross margin'}].", web: true, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "hw-channel", phase: "idea-plan", title: "Channel", blurb: "D2C, retail or distribution \u2014 and why that channel first.", fields: "title = the channel in a phrase; body = how it reaches buyers and why that channel first; bullets = [the first channel and its trade-off].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "hw-capital", phase: "idea-plan", title: "Capital & inventory", blurb: "The cash to build stock and fund the cycle before revenue.", fields: "title = the capital reality in a phrase; body = the cash to build inventory and fund the cash-conversion cycle before revenue catches up; bullets = [the capital gate before you can scale].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST }
+      ]
+    },
+    {
+      id: "idea-prove",
+      name: "Prove",
+      icon: "trending-up",
+      stage: "Shape",
+      studio: "idea",
+      tasks: [
+        { id: "risks", phase: "idea-prove", title: "Riskiest assumption", blurb: "The one belief that, if wrong, kills it \u2014 and the cheapest way to test it.", fields: "title = the riskiest assumption in a phrase; body = the single belief the whole idea rests on that could be false; bullets = [the cheapest experiment that would test it fast].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "milestones", phase: "idea-prove", title: "Next proof-point", blurb: "The concrete result to hit before building or raising more.", fields: "title = the next proof-point in a phrase; body = the specific outcome to reach next that would de-risk the idea; meta = [{label:'target', value:'the number or outcome to hit'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        // feature of an existing product
+        { id: "feat-cannibal", phase: "idea-prove", title: "Cannibalization", blurb: "What existing behaviour or revenue this could eat \u2014 and whether it's worth it.", fields: "title = the cannibalization risk in a phrase; body = what existing behaviour or revenue this could eat and whether the trade is worth it; bullets = [the metric you'd watch to catch it].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "feat-metric", phase: "idea-prove", title: "Success metric", blurb: "The one number that proves the feature earns its place.", fields: "title = the metric in a phrase; body = the single number that proves it belongs (adoption %, retention lift, revenue); meta = [{label:'target', value:'the number that means success'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "feat-rollout", phase: "idea-prove", title: "Rollout", blurb: "How you ship it \u2014 internal \u2192 beta \u2192 % \u2192 default, with a gate at each step.", fields: "title = the rollout in a phrase; body = the staged rollout and the gate at each step; bullets = [the guardrail that halts a bad rollout].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST }
+      ]
     }
   ];
   var TASKS = PHASES.flatMap(
@@ -1823,6 +1923,60 @@ Rules:
   );
   var getTask = (id) => TASK_BY_ID[id];
   var DEFAULT_SEQUENCE = TASKS.map((t) => t.id);
+  var IDEA_TEMPLATES = [
+    {
+      id: "general",
+      label: "General idea",
+      icon: "sparkles",
+      hint: "A startup or product idea that doesn't fit a specific shape yet.",
+      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "model", "gtm", "moat", "risks", "milestones"]
+    },
+    {
+      id: "marketplace",
+      label: "Marketplace / platform",
+      icon: "columns",
+      hint: "Two-sided: connects buyers and sellers (e.g. a marketplace for ad slots).",
+      tasks: ["problem", "mkt-demand", "insight", "whynow", "alternatives", "mkt-supply", "mkt-coldstart", "mkt-liquidity", "solution", "mkt-take", "mkt-trust", "gtm", "moat", "risks", "milestones"]
+    },
+    {
+      id: "app",
+      label: "Consumer app",
+      icon: "target",
+      hint: "A mobile or web app people use directly.",
+      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "app-loop", "app-retention", "app-platform", "app-distribution", "app-monetization", "moat", "risks", "milestones"]
+    },
+    {
+      id: "feature",
+      label: "Feature of an existing product",
+      icon: "git-branch",
+      hint: "A new feature inside a product/brand that already exists.",
+      tasks: ["problem", "feat-users", "feat-fit", "insight", "alternatives", "solution", "feat-adoption", "feat-buildbuy", "feat-cannibal", "feat-metric", "feat-rollout", "risks"]
+    },
+    {
+      id: "retail",
+      label: "Retail / physical space",
+      icon: "store",
+      hint: "A store, cafe, pop-up or other physical space.",
+      tasks: ["problem", "who", "whynow", "alternatives", "retail-concept", "retail-location", "retail-unit", "retail-ops", "retail-footfall", "model", "retail-expansion", "risks", "milestones"]
+    },
+    {
+      id: "saas",
+      label: "B2B SaaS",
+      icon: "boxes",
+      hint: "Software sold to teams or businesses.",
+      tasks: ["problem", "saas-icp", "saas-wedge", "insight", "whynow", "alternatives", "solution", "saas-motion", "saas-pricing", "saas-integration", "saas-expand", "moat", "risks", "milestones"]
+    },
+    {
+      id: "hardware",
+      label: "Hardware / physical product",
+      icon: "wallet",
+      hint: "A physical device or manufactured product.",
+      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "hw-bom", "hw-manufacturing", "hw-margin", "hw-channel", "hw-capital", "moat", "risks", "milestones"]
+    }
+  ];
+  var IDEA_TEMPLATE_BY_ID = Object.fromEntries(
+    IDEA_TEMPLATES.map((t) => [t.id, t])
+  );
 
   // ../../../brandbrain/app/api/studio/canvas/route.ts
   var runtime15 = "nodejs";
