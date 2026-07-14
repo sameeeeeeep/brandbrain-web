@@ -1,8 +1,8 @@
 (() => {
-  // ../../packages/protocol/dist/version.js
+  // packages/protocol/dist/version.js
   var PROVIDER_GLOBAL = "claude";
 
-  // ../../packages/sdk/dist/connect-chip.js
+  // packages/sdk/dist/connect-chip.js
   var STYLE = `
 :host { all: initial; }
 * { box-sizing: border-box; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
@@ -66,7 +66,6 @@
     let seq = 0;
     let wasConnected = false;
     let sessionDisconnected = false;
-    let upgradeAsked = false;
     const onDocClick = (e) => {
       if (menuOpen && !host.contains(e.target)) {
         menuOpen = false;
@@ -74,6 +73,20 @@
       }
     };
     document.addEventListener("click", onDocClick);
+    const initEvent = `${PROVIDER_GLOBAL}#initialized`;
+    let lateWatching = false;
+    const onLateInit = () => {
+      lateWatching = false;
+      window.removeEventListener(initEvent, onLateInit);
+      if (!destroyed)
+        void refresh();
+    };
+    function watchForLateProvider() {
+      if (lateWatching || destroyed)
+        return;
+      lateWatching = true;
+      window.addEventListener(initEvent, onLateInit);
+    }
     function el(tag, cls, text) {
       const n = document.createElement(tag);
       if (cls)
@@ -88,29 +101,19 @@
       if (destroyed || my !== seq)
         return;
       if (!(r instanceof Relay)) {
+        watchForLateProvider();
         state = { kind: "not-installed", installUrl };
         return render();
       }
       relay = r;
       subscribe(r);
-      let grant = sessionDisconnected ? null : await r.permissions().catch(() => null);
+      const grant = sessionDisconnected ? null : await r.permissions().catch(() => null);
       if (destroyed || my !== seq)
         return;
       if (!grant) {
         state = { kind: "disconnected", relay: r };
         emitTransition(false);
         return render();
-      }
-      const wanted = opts.scope?.contextKinds ?? [];
-      const granted = grant.contextKinds;
-      const covered = Array.isArray(granted) && (granted.length === 0 || wanted.every((k) => granted.includes(k)));
-      if (wanted.length && !covered && !upgradeAsked) {
-        upgradeAsked = true;
-        const upgraded = await r.connect(opts.scope).catch(() => null);
-        if (destroyed || my !== seq)
-          return;
-        if (upgraded)
-          grant = upgraded;
       }
       const wantsContext = opts.context !== "none";
       const [user, project] = await Promise.all([
@@ -242,12 +245,13 @@
       destroy: () => {
         destroyed = true;
         document.removeEventListener("click", onDocClick);
+        window.removeEventListener(initEvent, onLateInit);
         host.remove();
       }
     };
   }
 
-  // ../../packages/sdk/dist/index.js
+  // packages/sdk/dist/index.js
   var Relay = class {
     provider;
     constructor(provider2) {
@@ -398,7 +402,7 @@
     });
   }
 
-  // ../adapter/claude.mjs
+  // examples/adapter/claude.mjs
   var provider = typeof window !== "undefined" && window.claude && window.claude.isRelay ? window.claude : null;
   var _resolveReady;
   var _ready = new Promise((r) => {
@@ -425,7 +429,7 @@
     }
   }
 
-  // ../adapter/claude_storage.mjs
+  // examples/adapter/claude_storage.mjs
   async function req(params) {
     const provider2 = getProvider() || await whenProvider();
     if (!provider2) throw new Error("no provider \u2014 call setProvider(window.claude) after connect");
@@ -453,7 +457,7 @@
     return workspaceLost && !workspaceRead;
   }
 
-  // src/bootstrap.js
+  // examples/brandbrain-port/src/bootstrap.js
   function flattenPalette(raw) {
     const flat = [], rich = [];
     for (const p of Array.isArray(raw) ? raw : []) {
