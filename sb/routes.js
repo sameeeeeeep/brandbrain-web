@@ -6,7 +6,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
       __defProp(target, name, { get: all[name], enumerable: true });
   };
 
-  // examples/adapter/claude.mjs
+  // ../adapter/claude.mjs
   var provider = typeof window !== "undefined" && window.claude && window.claude.isRelay ? window.claude : null;
   var _resolveReady;
   var _ready = new Promise((r) => {
@@ -32,7 +32,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     try {
       const r = await provider.request({
         method: "claude_complete",
-        params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: wantsTools(opts) }
+        params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, sessionId: opts.sessionId, attachments: opts.attachments, maxTokens: opts.maxTokens, agentic: wantsTools(opts) }
       });
       return typeof r?.text === "string" ? r.text : null;
     } catch {
@@ -58,17 +58,24 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
           if (!streamId || d.streamId !== streamId) return;
           if (d.type === "text") send({ type: "text", text: d.text });
           else if (d.type === "sources") send({ type: "sources", urls: d.urls });
-          else if (d.type === "done" || d.type === "error") {
+          else if (d.type === "done") {
             provider.removeListener?.("delta", onDelta);
+            send({ type: "done", model: d.result?.model });
             try {
               controller.close();
+            } catch {
+            }
+          } else if (d.type === "error") {
+            provider.removeListener?.("delta", onDelta);
+            try {
+              controller.error(new Error(d.error?.message ?? "AI request failed"));
             } catch {
             }
           }
         };
         provider.on("delta", onDelta);
         try {
-          const res = await provider.request({ method: "claude_stream", params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, agentic: wantsTools(opts) } });
+          const res = await provider.request({ method: "claude_stream", params: { prompt: prompt5, system: opts.system, model: opts.model, effort: opts.effort, sessionId: opts.sessionId, attachments: opts.attachments, maxTokens: opts.maxTokens, agentic: wantsTools(opts) } });
           streamId = res?.streamId;
         } catch {
           provider.removeListener?.("delta", onDelta);
@@ -92,7 +99,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     }
   }
 
-  // examples/adapter/router.mjs
+  // ../adapter/router.mjs
   function createApp(routes2, { prefix = "/api" } = {}) {
     return {
       prefix,
@@ -134,7 +141,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     };
   }
 
-  // ../brandbrain/app/api/ask/route.ts
+  // ../../../brandbrain/app/api/ask/route.ts
   var route_exports = {};
   __export(route_exports, {
     POST: () => POST,
@@ -142,7 +149,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     runtime: () => runtime
   });
 
-  // examples/brandbrain-port/.build/lib/seed/brands.ts
+  // .build/lib/seed/brands.ts
   var part = (key, label, value) => ({ key, label, value });
   var brands = [
     {
@@ -438,7 +445,7 @@ globalThis.process=globalThis.process||{env:{},cwd:function(){return '/'},platfo
     return brands.find((b) => b.slug === slug);
   }
 
-  // ../brandbrain/app/api/ask/route.ts
+  // ../../../brandbrain/app/api/ask/route.ts
   var runtime = "nodejs";
   var maxDuration = 120;
   var LIBRARY = brands.map((b) => `- ${b.name} (${b.category}, ${b.market}): ${b.positioning} Steal: ${b.steal}`).join("\n");
@@ -489,7 +496,7 @@ A: ${h.a}`);
     });
   }
 
-  // ../brandbrain/app/api/img/route.ts
+  // ../../../brandbrain/app/api/img/route.ts
   var route_exports2 = {};
   __export(route_exports2, {
     GET: () => GET,
@@ -541,7 +548,7 @@ A: ${h.a}`);
     }
   }
 
-  // ../brandbrain/app/api/os/ads/route.ts
+  // ../../../brandbrain/app/api/os/ads/route.ts
   var route_exports3 = {};
   __export(route_exports3, {
     POST: () => POST2,
@@ -634,7 +641,7 @@ A: ${h.a}`);
     return Response.json({ ads });
   }
 
-  // ../brandbrain/app/api/os/briefing/route.ts
+  // ../../../brandbrain/app/api/os/briefing/route.ts
   var route_exports4 = {};
   __export(route_exports4, {
     POST: () => POST3,
@@ -677,7 +684,7 @@ Write the briefing.`;
     return Response.json({ briefing: briefing.trim(), grounded });
   }
 
-  // ../brandbrain/app/api/os/draft/route.ts
+  // ../../../brandbrain/app/api/os/draft/route.ts
   var route_exports5 = {};
   __export(route_exports5, {
     POST: () => POST4,
@@ -685,7 +692,7 @@ Write the briefing.`;
     runtime: () => runtime5
   });
   var runtime5 = "nodejs";
-  var maxDuration4 = 120;
+  var maxDuration4 = 300;
   var SYSTEM4 = (name) => `You are brandbrain's drafting agent for the brand "${name}". You write in the brand's EXACT voice and you NEVER send, post, or publish \u2014 you produce a DRAFT the founder reviews and sends themselves. Do not invent facts, prices, product names, or people not given to you. Sentence case, no emoji. Output only the draft (markdown), no preamble.`;
   var clean = (v) => {
     const s2 = String(v ?? "").trim();
@@ -722,12 +729,13 @@ The founder reviewed your last draft and wants you to redirect it: "${steer}". R
     const prompt5 = `${ctx}
 
 ${instruction}${redirect}`;
-    const draft = await runClaude(prompt5, { system: SYSTEM4(name), effort: "low", timeoutMs: 9e4 });
+    const timeoutMs = kind === "task-draft" ? 24e4 : 9e4;
+    const draft = await runClaude(prompt5, { system: SYSTEM4(name), effort: "low", timeoutMs });
     if (!draft) return Response.json({ error: "Couldn\u2019t draft that right now \u2014 try again." }, { status: 503 });
     return Response.json({ draft: draft.trim() });
   }
 
-  // ../brandbrain/app/api/os/gmail/route.ts
+  // ../../../brandbrain/app/api/os/gmail/route.ts
   var route_exports6 = {};
   __export(route_exports6, {
     POST: () => POST5,
@@ -789,7 +797,7 @@ On failure return exactly: {"error":"<short honest reason>"}`;
     return Response.json({ draftId });
   }
 
-  // ../brandbrain/app/api/os/investors/route.ts
+  // ../../../brandbrain/app/api/os/investors/route.ts
   var route_exports7 = {};
   __export(route_exports7, {
     POST: () => POST6,
@@ -890,7 +898,7 @@ Return ONLY this JSON:
     return Response.json({ investors });
   }
 
-  // ../brandbrain/app/api/os/network/route.ts
+  // ../../../brandbrain/app/api/os/network/route.ts
   var route_exports8 = {};
   __export(route_exports8, {
     POST: () => POST7,
@@ -997,7 +1005,7 @@ Real or absent: every name, handle and domain must be one you are confident is r
     return Response.json({ creators, brands: brands2, grounded });
   }
 
-  // ../brandbrain/app/api/os/pipeline/route.ts
+  // ../../../brandbrain/app/api/os/pipeline/route.ts
   var route_exports9 = {};
   __export(route_exports9, {
     POST: () => POST8,
@@ -1067,7 +1075,7 @@ Real or absent: every name, handle and domain must be one you are confident is r
     return Response.json({ items });
   }
 
-  // ../brandbrain/app/api/os/pulse/route.ts
+  // ../../../brandbrain/app/api/os/pulse/route.ts
   var route_exports10 = {};
   __export(route_exports10, {
     POST: () => POST9,
@@ -1114,7 +1122,7 @@ If the store is unreachable or has no data, return {"pulse":null}.`;
     });
   }
 
-  // ../brandbrain/app/api/os/report/route.ts
+  // ../../../brandbrain/app/api/os/report/route.ts
   var route_exports11 = {};
   __export(route_exports11, {
     POST: () => POST10,
@@ -1211,7 +1219,7 @@ ${spec}${redirect}`;
     return Response.json({ report: text.trim() });
   }
 
-  // ../brandbrain/app/api/research/brand/route.ts
+  // ../../../brandbrain/app/api/research/brand/route.ts
   var route_exports12 = {};
   __export(route_exports12, {
     POST: () => POST11,
@@ -1219,7 +1227,7 @@ ${spec}${redirect}`;
     runtime: () => runtime12
   });
 
-  // examples/brandbrain-port/shims/node-fs.mjs
+  // shims/node-fs.mjs
   var mem = /* @__PURE__ */ new Map();
   async function mkdir() {
   }
@@ -1233,12 +1241,12 @@ ${spec}${redirect}`;
     mem.set(p, data);
   }
 
-  // examples/brandbrain-port/shims/node-path.mjs
+  // shims/node-path.mjs
   function join(...parts) {
     return parts.filter((p) => p != null && p !== "").join("/").replace(/\/{2,}/g, "/");
   }
 
-  // examples/brandbrain-port/.build/lib/research.ts
+  // .build/lib/research.ts
   var CACHE_DIR = join(process.cwd(), ".cache", "research");
   var SYSTEM9 = `You are brandbrain's competitor-teardown researcher. You research REAL consumer (D2C) brands and report only what you can actually support.
 
@@ -1312,7 +1320,7 @@ Hard rules:
     return data;
   }
 
-  // ../brandbrain/app/api/research/brand/route.ts
+  // ../../../brandbrain/app/api/research/brand/route.ts
   var runtime12 = "nodejs";
   var maxDuration11 = 160;
   async function POST11(req2) {
@@ -1337,7 +1345,7 @@ Hard rules:
     return Response.json(research);
   }
 
-  // ../brandbrain/app/api/studio/analogue/route.ts
+  // ../../../brandbrain/app/api/studio/analogue/route.ts
   var route_exports13 = {};
   __export(route_exports13, {
     POST: () => POST12,
@@ -1417,7 +1425,7 @@ Give 3-4 moves. Use confidence "strong" only for a genuine structural rhyme; "lo
     return Response.json({ analogue: { ...analogue, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/brief/route.ts
+  // ../../../brandbrain/app/api/studio/brief/route.ts
   var route_exports14 = {};
   __export(route_exports14, {
     POST: () => POST13,
@@ -1425,7 +1433,7 @@ Give 3-4 moves. Use confidence "strong" only for a genuine structural rhyme; "lo
     runtime: () => runtime14
   });
 
-  // examples/brandbrain-port/shims/claude-session.mjs
+  // shims/claude-session.mjs
   var STUDIO_SYSTEM = `You are brandbrain, a launch & growth strategist for consumer (D2C) brands, running a guided brand build for a founder in one continuous conversation.
 
 Across this conversation you expand their idea into a brief, then generate OPTIONS for each piece of the brand \u2014 name, positioning, audience, voice, visual identity, competitors, pricing, product range, suppliers \u2014 as structured cards they pick from. Each turn tells you exactly what to produce and the JSON shape to return.
@@ -1456,7 +1464,7 @@ Rules:
     });
   }
 
-  // ../brandbrain/app/api/studio/brief/route.ts
+  // ../../../brandbrain/app/api/studio/brief/route.ts
   var runtime14 = "nodejs";
   var maxDuration13 = 180;
   async function POST13(req2) {
@@ -1502,7 +1510,7 @@ Rules:
     return Response.json({ brief });
   }
 
-  // ../brandbrain/app/api/studio/canvas/route.ts
+  // ../../../brandbrain/app/api/studio/canvas/route.ts
   var route_exports15 = {};
   __export(route_exports15, {
     POST: () => POST14,
@@ -1510,7 +1518,7 @@ Rules:
     runtime: () => runtime15
   });
 
-  // examples/brandbrain-port/.build/lib/studio/spec.ts
+  // .build/lib/studio/spec.ts
   function gapScore(c) {
     const s2 = 0.3 * c.demand + 0.25 * c.sparsity + 0.25 * c.vulnerability + 0.2 * c.feasibility - 0.2 * c.risk;
     return Math.max(0, Math.min(1, s2));
@@ -1737,8 +1745,10 @@ Rules:
         { id: "problem", phase: "idea-thesis", title: "The problem", blurb: "Sharp, real ways to frame the pain this idea removes.", fields: "title = the problem in a phrase; body = who feels it and how acute it is, in plain words a stranger instantly gets \u2014 no jargon; bullets = [the concrete moment the pain bites].", web: false, select: "one", count: 4, deps: [], model: FAST },
         { id: "who", phase: "idea-thesis", title: "Beachhead user", blurb: "The specific first user to win \u2014 not everyone, someone.", fields: "title = the first user in a phrase; body = who they are and why they're the right wedge to start with; chips = 2-4 short segment tags.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "insight", phase: "idea-thesis", title: "The insight", blurb: "The non-obvious reason this can work now when the obvious version hasn't.", fields: "title = the insight in a phrase; body = the wedge \u2014 the non-obvious thing that's true here that most people miss, one tight sentence; bullets = [the assumption most people get wrong].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
+        { id: "founderwhy", phase: "idea-thesis", title: "Why you", blurb: "The unfair advantage this founder has \u2014 steer with your background so it's yours, not generic.", fields: "title = the founder edge in a phrase; body = why THIS founder is the one to build it (lived pain, expertise, access, distribution), one tight sentence; bullets = [the claim no competitor can copy]. If the founder's steer describes their background, build every card strictly from it \u2014 NEVER invent biographical facts. With no steer, each card is a distinct credibility ANGLE a founder could claim here (phrased as a conditional, e.g. 'if you've lived this pain\u2026'), not a fabricated bio.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "whynow", phase: "idea-thesis", title: "Why now", blurb: "The shift that makes this newly possible \u2014 grounded in what's actually changed.", fields: "title = the enabling shift in a phrase; body = the tech, behaviour or regulatory change that makes this possible NOW and wasn't before; bullets = [a concrete, recent signal the shift is real].", web: true, select: "one", count: 4, deps: [], model: FAST },
-        { id: "alternatives", phase: "idea-thesis", title: "Alternatives", blurb: "What people actually do today \u2014 real incumbents, workarounds and substitutes.", fields: "Each card is a REAL current alternative (an incumbent product, a manual workaround, or a substitute). title = the alternative; reference = the real product/company + its domain; body = where it falls short for this user. Use only real, verifiable options.", web: true, select: "many", count: 5, deps: ["problem"] }
+        { id: "alternatives", phase: "idea-thesis", title: "Alternatives", blurb: "What people actually do today \u2014 real incumbents, workarounds and substitutes.", fields: "Each card is a REAL current alternative (an incumbent product, a manual workaround, or a substitute). title = the alternative; reference = the real product/company + its domain; body = where it falls short for this user. Use only real, verifiable options.", web: true, select: "many", count: 5, deps: ["problem"] },
+        { id: "comps", phase: "idea-thesis", title: "The analogy", blurb: "The 'X, but for Y' that makes a stranger get it instantly \u2014 mechanism match, not vibe.", fields: "Each card is a famous-company analogy that explains this idea ('X, but for Y' / 'the X of Y'). title = the analogy phrase itself; reference = the real company being borrowed + its domain; body = why the MECHANISM genuinely matches (the structural parallel, not surface vibes), one sentence; bullets = [where the analogy breaks \u2014 be honest]. Use only famous, real companies a stranger instantly recognizes.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST }
       ]
     },
     {
@@ -1813,12 +1823,34 @@ Rules:
       stage: "Shape",
       studio: "idea",
       tasks: [
+        { id: "oneliner", phase: "idea-prove", title: "One-liner", blurb: "What it does in \u226450 characters \u2014 plain words a stranger parses in one read.", fields: "Each card is a \u226450-character description of what the company does (YC application style: plain words, no analogy, no hype, no company name). title = the one-liner itself \u2014 50 characters or FEWER, count carefully; meta = [{label:'chars', value:'the exact character count'}]; body = who instantly gets it and why, one sentence.", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "risks", phase: "idea-prove", title: "Riskiest assumption", blurb: "The one belief that, if wrong, kills it \u2014 and the cheapest way to test it.", fields: "title = the riskiest assumption in a phrase; body = the single belief the whole idea rests on that could be false; bullets = [the cheapest experiment that would test it fast].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "milestones", phase: "idea-prove", title: "Next proof-point", blurb: "The concrete result to hit before building or raising more.", fields: "title = the next proof-point in a phrase; body = the specific outcome to reach next that would de-risk the idea; meta = [{label:'target', value:'the number or outcome to hit'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         // feature of an existing product
         { id: "feat-cannibal", phase: "idea-prove", title: "Cannibalization", blurb: "What existing behaviour or revenue this could eat \u2014 and whether it's worth it.", fields: "title = the cannibalization risk in a phrase; body = what existing behaviour or revenue this could eat and whether the trade is worth it; bullets = [the metric you'd watch to catch it].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "feat-metric", phase: "idea-prove", title: "Success metric", blurb: "The one number that proves the feature earns its place.", fields: "title = the metric in a phrase; body = the single number that proves it belongs (adoption %, retention lift, revenue); meta = [{label:'target', value:'the number that means success'}].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST },
         { id: "feat-rollout", phase: "idea-prove", title: "Rollout", blurb: "How you ship it \u2014 internal \u2192 beta \u2192 % \u2192 default, with a gate at each step.", fields: "title = the rollout in a phrase; body = the staged rollout and the gate at each step; bullets = [the guardrail that halts a bad rollout].", web: false, select: "one", count: 4, deps: ["problem"], model: FAST }
+      ]
+    },
+    // ── idea-pitch: the YC-application COMPOSER's tasks. Registered so the generic engine can draft
+    // them (getTask + /api/studio), but deliberately in NO template — they never appear on the board.
+    // Each card is a complete draft ANSWER (longform: body = the answer itself); title = the draft's
+    // angle so options scan as genuinely different takes. `decided` + deps carry the locked playbook
+    // into every draft, and lock()'s stale-cascade re-flags them when an upstream decision changes.
+    {
+      id: "idea-pitch",
+      name: "Pitch",
+      icon: "file-text",
+      stage: "Shape",
+      studio: "idea",
+      tasks: [
+        { id: "yc-what", phase: "idea-pitch", title: "What are you making?", blurb: "The product answer \u2014 what it is, what it does, for whom.", longform: true, fields: `Each card is a complete draft answer to the YC application question "What is your company going to make? Describe your product and what it does or will do." title = this draft's angle in 3-5 words (e.g. 'mechanism first'); body = the answer itself, 80-160 words of flowing first-person-plural prose \u2014 plain confident words, concrete specifics pulled ONLY from the locked decisions and brief, no hype adjectives, no lists. Each card takes a genuinely different angle (mechanism-first, user-story-first, analogy-first\u2026). Never invent facts, metrics or names beyond what's locked.`, web: false, select: "one", count: 3, deps: ["problem", "solution", "comps", "oneliner"] },
+        { id: "yc-why", phase: "idea-pitch", title: "Why this, why you?", blurb: "Why you picked it, your edge, and how you know people need it.", longform: true, fields: `Each card is a complete draft answer to the YC question "Why did you pick this idea to work on? Do you have domain expertise? How do you know people need what you're making?" title = the angle in 3-5 words; body = 80-160 words of first-person-plural prose grounded ONLY in the locked decisions (especially the founder edge, insight and why-now) \u2014 NEVER invent biography, credentials or evidence that isn't locked; if the founder edge isn't locked, argue from the insight and honestly note the founder story is theirs to add. Distinct angle per card.`, web: false, select: "one", count: 3, deps: ["founderwhy", "insight", "whynow", "problem"] },
+        { id: "yc-new", phase: "idea-pitch", title: "What's new here?", blurb: "The non-obvious thing, and what people resort to today.", longform: true, fields: `Each card is a complete draft answer to the YC question "What's new about what you're making? What substitutes do people resort to because it doesn't exist yet?" title = the angle in 3-5 words; body = 80-160 words, first-person plural, naming the real alternatives from the locked decisions and where each falls short, then the genuinely new thing \u2014 plain words, no hype, nothing invented. Distinct angle per card.`, web: false, select: "one", count: 3, deps: ["insight", "alternatives", "whynow", "problem"] },
+        { id: "yc-competitors", phase: "idea-pitch", title: "Competitors & your edge", blurb: "Who you're up against and what you understand that they don't.", longform: true, fields: `Each card is a complete draft answer to the YC question "Who are your competitors? What do you understand about your business that they don't?" title = the angle in 3-5 words; body = 80-160 words, first-person plural: the real competitive field from the locked alternatives/research, then the one understanding that's yours (the moat) \u2014 concrete, no bravado, nothing invented. Distinct angle per card.`, web: false, select: "one", count: 3, deps: ["alternatives", "moat", "problem"] },
+        { id: "yc-money", phase: "idea-pitch", title: "How you make money", blurb: "The model and how big it could get \u2014 honestly.", longform: true, fields: 'Each card is a complete draft answer to the YC question "How do or will you make money? How much could you make?" title = the angle in 3-5 words; body = 80-160 words, first-person plural, stating the locked business model mechanics (who pays, for what, roughly how much) and an honest order-of-magnitude sizing ONLY if the locked decisions or research support one \u2014 never invent figures. Distinct angle per card.', web: false, select: "one", count: 3, deps: ["model", "mkt-take", "app-monetization", "saas-pricing", "hw-margin", "retail-unit"] },
+        { id: "yc-progress", phase: "idea-pitch", title: "How far along?", blurb: "Honest stage, the riskiest assumption, the next proof point.", longform: true, fields: `Each card is a complete draft answer to the YC question "How far along are you?" title = the angle in 3-5 words; body = 60-120 words, first-person plural, HONEST: this is an idea at validation stage \u2014 say what's genuinely done (the research and locked thesis), the riskiest assumption and its cheapest test, and the next proof point. Never claim users, revenue or a build that the locked decisions don't state. Distinct angle per card.`, web: false, select: "one", count: 3, deps: ["risks", "milestones", "problem"] },
+        { id: "yc-users", phase: "idea-pitch", title: "How you get users", blurb: "First users, the wedge, and cracking any chicken-and-egg.", longform: true, fields: `Each card is a complete draft answer to the YC question "How will you get users? If your idea faces a chicken-and-egg problem, how will you crack it?" title = the angle in 3-5 words; body = 80-160 words, first-person plural: the concrete first-100-users move from the locked go-to-market, the beachhead, and (for two-sided ideas) the locked cold-start tactic \u2014 specific channels and first moves, no 'marketing' hand-waving, nothing invented. Distinct angle per card.`, web: false, select: "one", count: 3, deps: ["gtm", "who", "mkt-coldstart"] }
       ]
     }
   ];
@@ -1929,21 +1961,21 @@ Rules:
       label: "General idea",
       icon: "sparkles",
       hint: "A startup or product idea that doesn't fit a specific shape yet.",
-      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "model", "gtm", "moat", "risks", "milestones"]
+      tasks: ["problem", "who", "insight", "founderwhy", "whynow", "alternatives", "comps", "solution", "model", "gtm", "moat", "oneliner", "risks", "milestones"]
     },
     {
       id: "marketplace",
       label: "Marketplace / platform",
       icon: "columns",
       hint: "Two-sided: connects buyers and sellers (e.g. a marketplace for ad slots).",
-      tasks: ["problem", "mkt-demand", "insight", "whynow", "alternatives", "mkt-supply", "mkt-coldstart", "mkt-liquidity", "solution", "mkt-take", "mkt-trust", "gtm", "moat", "risks", "milestones"]
+      tasks: ["problem", "mkt-demand", "insight", "founderwhy", "whynow", "alternatives", "comps", "mkt-supply", "mkt-coldstart", "mkt-liquidity", "solution", "mkt-take", "mkt-trust", "gtm", "moat", "oneliner", "risks", "milestones"]
     },
     {
       id: "app",
       label: "Consumer app",
       icon: "target",
       hint: "A mobile or web app people use directly.",
-      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "app-loop", "app-retention", "app-platform", "app-distribution", "app-monetization", "moat", "risks", "milestones"]
+      tasks: ["problem", "who", "insight", "founderwhy", "whynow", "alternatives", "comps", "solution", "app-loop", "app-retention", "app-platform", "app-distribution", "app-monetization", "moat", "oneliner", "risks", "milestones"]
     },
     {
       id: "feature",
@@ -1957,28 +1989,28 @@ Rules:
       label: "Retail / physical space",
       icon: "store",
       hint: "A store, cafe, pop-up or other physical space.",
-      tasks: ["problem", "who", "whynow", "alternatives", "retail-concept", "retail-location", "retail-unit", "retail-ops", "retail-footfall", "model", "retail-expansion", "risks", "milestones"]
+      tasks: ["problem", "who", "founderwhy", "whynow", "alternatives", "comps", "retail-concept", "retail-location", "retail-unit", "retail-ops", "retail-footfall", "model", "retail-expansion", "oneliner", "risks", "milestones"]
     },
     {
       id: "saas",
       label: "B2B SaaS",
       icon: "boxes",
       hint: "Software sold to teams or businesses.",
-      tasks: ["problem", "saas-icp", "saas-wedge", "insight", "whynow", "alternatives", "solution", "saas-motion", "saas-pricing", "saas-integration", "saas-expand", "moat", "risks", "milestones"]
+      tasks: ["problem", "saas-icp", "saas-wedge", "insight", "founderwhy", "whynow", "alternatives", "comps", "solution", "saas-motion", "saas-pricing", "saas-integration", "saas-expand", "moat", "oneliner", "risks", "milestones"]
     },
     {
       id: "hardware",
       label: "Hardware / physical product",
       icon: "wallet",
       hint: "A physical device or manufactured product.",
-      tasks: ["problem", "who", "insight", "whynow", "alternatives", "solution", "hw-bom", "hw-manufacturing", "hw-margin", "hw-channel", "hw-capital", "moat", "risks", "milestones"]
+      tasks: ["problem", "who", "insight", "founderwhy", "whynow", "alternatives", "comps", "solution", "hw-bom", "hw-manufacturing", "hw-margin", "hw-channel", "hw-capital", "moat", "oneliner", "risks", "milestones"]
     }
   ];
   var IDEA_TEMPLATE_BY_ID = Object.fromEntries(
     IDEA_TEMPLATES.map((t) => [t.id, t])
   );
 
-  // ../brandbrain/app/api/studio/canvas/route.ts
+  // ../../../brandbrain/app/api/studio/canvas/route.ts
   var runtime15 = "nodejs";
   var maxDuration14 = 240;
   var STUDIO_SYSTEM2 = `You are brandbrain, a market analyst for consumer (D2C) founders. You map a market from a one-line idea so the founder understands the field before deciding anything. Be sharp and concrete. Every brand, domain, price and signal must be REAL \u2014 never invent a brand, domain, url or statistic; if you can't verify a number, describe it qualitatively. Sentence case, no emoji, no hashtags. Output ONLY the JSON asked for.`;
@@ -2108,13 +2140,79 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
     return Response.json({ canvas: { ...canvas, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/clone/route.ts
+  // ../../../brandbrain/app/api/studio/clone/route.ts
   var route_exports16 = {};
   __export(route_exports16, {
     POST: () => POST15,
     maxDuration: () => maxDuration15,
     runtime: () => runtime16
   });
+
+  // shims/extract.mjs
+  var rgb = (hex3) => ({ r: parseInt(hex3.slice(1, 3), 16), g: parseInt(hex3.slice(3, 5), 16), b: parseInt(hex3.slice(5, 7), 16) });
+  function colorDistance(a, b) {
+    const x = rgb(a), y = rgb(b);
+    return Math.sqrt((x.r - y.r) ** 2 + (x.g - y.g) ** 2 + (x.b - y.b) ** 2);
+  }
+  function toBrandFacts(r) {
+    if (!r || r.reachable === false) return null;
+    return {
+      domain: r.domain,
+      siteName: r.siteName || void 0,
+      description: r.description || void 0,
+      currency: r.currency || void 0,
+      platform: r.platform || void 0,
+      ogImage: r.ogImage || void 0,
+      palette: Array.isArray(r.palette) ? r.palette : [],
+      products: (Array.isArray(r.products) ? r.products : []).map((p) => ({
+        title: p.short,
+        short: p.short,
+        handle: "",
+        type: p.type || "",
+        price: typeof p.price === "number" ? p.price : null,
+        available: true,
+        url: p.url || void 0
+      })),
+      category: r.category || void 0,
+      priceRange: r.priceRange || void 0,
+      socials: Array.isArray(r.socials) ? r.socials : []
+    };
+  }
+  async function readBrandSite(rawUrl) {
+    const provider2 = getProvider() || await whenProvider();
+    if (!provider2) return null;
+    try {
+      const r = await provider2.request({ method: "sb_brand", params: { url: String(rawUrl || "") } });
+      return toBrandFacts(r);
+    } catch {
+      return null;
+    }
+  }
+  function factsForPrompt(f) {
+    const lines = [];
+    lines.push(`OBSERVED FACTS \u2014 read directly from ${f.domain} just now. These are ground truth: use them exactly, do not replace them with your own recollection of this brand.`);
+    if (f.siteName) lines.push(`- Site name: ${f.siteName}`);
+    if (f.description) lines.push(`- Site description: ${f.description}`);
+    if (f.platform) lines.push(`- Platform: ${f.platform}`);
+    if (f.palette.length) {
+      lines.push(`- REAL brand colours, parsed from the site's served CSS (use EXACTLY these hexes, in this order; your only job is to give each a colour name):`);
+      for (const p of f.palette) lines.push(`    ${p.hex}  (declared as ${p.from})`);
+    } else {
+      lines.push(`- No brand colours could be parsed from the served CSS. Return an EMPTY palette rather than guessing.`);
+    }
+    if (f.products.length) {
+      const cur = f.currency ? `${f.currency} ` : "";
+      lines.push(`- REAL catalogue: ${f.products.length} products${f.category ? ` \xB7 category "${f.category}"` : ""}${f.priceRange ? ` \xB7 prices ${cur}${f.priceRange.min}\u2013${cur}${f.priceRange.max}` : ""}. Build "range", "format" and "pricing" from THESE, never from invented SKUs:`);
+      for (const p of f.products.slice(0, 40)) lines.push(`    ${p.short}${p.price != null ? ` \u2014 ${cur}${p.price}` : ""}${p.type ? ` [${p.type}]` : ""}`);
+      if (f.products.length > 40) lines.push(`    \u2026and ${f.products.length - 40} more`);
+    } else {
+      lines.push(`- No public catalogue was reachable. Do not invent SKUs or prices; omit them instead.`);
+    }
+    if (f.socials.length) lines.push(`- Socials: ${f.socials.map((s2) => s2.url).join(", ")}`);
+    return lines.join("\n");
+  }
+
+  // ../../../brandbrain/app/api/studio/clone/route.ts
   var runtime16 = "nodejs";
   var maxDuration15 = 240;
   var SYSTEM11 = `You are brandbrain's brand-cloning researcher. You read a REAL consumer brand's website and public information and extract its brand system into a structured starting point another founder can adapt. Extract ONLY from what is real on the site and in public info \u2014 never invent positioning, prices, product names, or colours you cannot actually see. Colours must be the brand's REAL hex values from the site. Sentence case, no emoji. Output ONLY the JSON object asked for, no prose, no code fences.`;
@@ -2142,6 +2240,18 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
       return url2.replace(/^www\./, "").split("/")[0];
     }
   };
+  function prettyName(from) {
+    const n = from.replace(/^--/, "").replace(/^color-/, "").replace(/[-_]+/g, " ").trim();
+    if (!n || n === "frequency") return "";
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  }
+  function reconcilePalette(modelPalette, facts) {
+    if (!facts?.palette.length) return void 0;
+    return facts.palette.map((sw) => {
+      const named = modelPalette.find((m) => colorDistance(m.hex, sw.hex) < 40);
+      return { name: named?.name || prettyName(sw.from), hex: sw.hex };
+    });
+  }
   async function POST15(req2) {
     let body;
     try {
@@ -2155,7 +2265,10 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
     const domain5 = domainOf(raw);
     const url2 = /^https?:\/\//i.test(raw) ? raw : `https://${domain5}`;
     const market = s(body.market);
-    const prompt5 = (own ? `This is the founder's OWN existing brand: ${url2}
+    const facts = await readBrandSite(url2);
+    const prompt5 = (facts ? `${factsForPrompt(facts)}
+
+` : "") + (own ? `This is the founder's OWN existing brand: ${url2}
 
 Fetch that page (and a couple of its key pages \u2014 about, products, shop \u2014 if linked), and use public info, to reconstruct the brand's real system AS IT IS \u2014 their actual name, story, positioning, prices and range. This becomes their working foundation, not a starting point to adapt.
 
@@ -2183,7 +2296,7 @@ Fetch that page (and a couple of its key pages \u2014 about, products, shop \u20
   }
 }
 
-Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are REAL (or omit that meta row). Do not invent SKUs, names, or claims. If the site can't be read, still give your best public-knowledge extraction, but never fabricate specifics.`;
+` + (facts ? `Hard rules: the palette MUST be exactly the observed hexes listed above, in that order \u2014 name them, never substitute your own. "range", "format" and "pricing" MUST come from the observed catalogue above. Do not invent SKUs, names, prices or claims; where the observed facts are thin, extract less rather than embellish.` : `Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are REAL (or omit that meta row). Do not invent SKUs, names, or claims. If the site can't be read, still give your best public-knowledge extraction, but never fabricate specifics.`);
     const opts = { system: own ? SYSTEM_OWN : SYSTEM11, allowedTools: ["WebSearch", "WebFetch"], effort: "low", timeoutMs: 21e4 };
     let text = await runClaude(prompt5, opts);
     let parsed = text ? extractJson(text) : null;
@@ -2226,8 +2339,8 @@ Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are RE
     put("audience", (r) => ({ title: s(r.title), body: s(r.body) }));
     put("voice", (r) => ({ title: s(r.title), body: s(r.body), bullets: strArr(r.bullets) }));
     put("identity", (r) => {
-      const palette = (Array.isArray(r.palette) ? r.palette : []).map((p) => p && typeof p === "object" ? { name: s(p.name) || "", hex: hex(p.hex) } : null).filter((p) => !!p && !!p.hex);
-      return { title: s(r.title), palette: palette.length ? palette : void 0 };
+      const modelPalette = (Array.isArray(r.palette) ? r.palette : []).map((p) => p && typeof p === "object" ? { name: s(p.name) || "", hex: hex(p.hex) } : null).filter((p) => !!p && !!p.hex);
+      return { title: s(r.title), palette: reconcilePalette(modelPalette, facts) };
     });
     put("pricing", (r) => ({ title: s(r.title), meta: metaArr(r.meta) }));
     put("format", (r) => ({ title: s(r.title), subtitle: s(r.subtitle), body: s(r.body), chips: strArr(r.chips) }));
@@ -2236,10 +2349,27 @@ Hard rules: colours are the brand's REAL hex values (3-5 of them). Prices are RE
     if (Object.keys(locks).length < 3) {
       return Response.json({ error: own ? "Couldn\u2019t read enough from your site \u2014 check the link (or try your about/shop page)." : "Couldn\u2019t extract enough from that brand \u2014 try a different link." }, { status: 503 });
     }
-    return Response.json({ source, brief, path, gap, locks });
+    return Response.json({
+      source,
+      brief,
+      path,
+      gap,
+      locks,
+      facts: facts ? {
+        domain: facts.domain,
+        platform: facts.platform,
+        currency: facts.currency,
+        category: facts.category,
+        priceRange: facts.priceRange,
+        palette: facts.palette,
+        socials: facts.socials,
+        productCount: facts.products.length,
+        products: facts.products.slice(0, 60)
+      } : void 0
+    });
   }
 
-  // ../brandbrain/app/api/studio/connect/route.ts
+  // ../../../brandbrain/app/api/studio/connect/route.ts
   var route_exports17 = {};
   __export(route_exports17, {
     POST: () => POST16,
@@ -2313,7 +2443,7 @@ Reply with just "ok".`
     return Response.json({ connected: parsed.connected, brief });
   }
 
-  // ../brandbrain/app/api/studio/deepen/route.ts
+  // ../../../brandbrain/app/api/studio/deepen/route.ts
   var route_exports18 = {};
   __export(route_exports18, {
     POST: () => POST17,
@@ -2406,7 +2536,7 @@ Use confidence "high" only for a clearly-sourced fact; "low" for a single weak s
     return Response.json({ profile });
   }
 
-  // ../brandbrain/app/api/studio/end/route.ts
+  // ../../../brandbrain/app/api/studio/end/route.ts
   var route_exports19 = {};
   __export(route_exports19, {
     POST: () => POST18,
@@ -2424,7 +2554,7 @@ Use confidence "high" only for a clearly-sourced fact; "low" for a single weak s
     return Response.json({ ok: true });
   }
 
-  // ../brandbrain/app/api/studio/gaps/route.ts
+  // ../../../brandbrain/app/api/studio/gaps/route.ts
   var route_exports20 = {};
   __export(route_exports20, {
     POST: () => POST19,
@@ -2502,7 +2632,7 @@ Return ONLY: {"gaps":[{"title":"a 2-5 word opening","rationale":"one line why it
     return Response.json({ gaps });
   }
 
-  // ../brandbrain/app/api/studio/inspiration/route.ts
+  // ../../../brandbrain/app/api/studio/inspiration/route.ts
   var route_exports21 = {};
   __export(route_exports21, {
     POST: () => POST20,
@@ -2552,7 +2682,7 @@ Return ONLY: {"brands":[{"brand":"...","domain":"brand.com","take":"how they did
     return Response.json({ brands: brands2 });
   }
 
-  // ../brandbrain/app/api/studio/path-suggest/route.ts
+  // ../../../brandbrain/app/api/studio/path-suggest/route.ts
   var route_exports22 = {};
   __export(route_exports22, {
     POST: () => POST21,
@@ -2607,7 +2737,7 @@ Return ONLY: {"recommended":"founder|story|ingredient|problem","notes":{"founder
     return Response.json({ recommended, notes });
   }
 
-  // ../brandbrain/app/api/studio/route.ts
+  // ../../../brandbrain/app/api/studio/route.ts
   var route_exports23 = {};
   __export(route_exports23, {
     POST: () => POST22,
@@ -2727,7 +2857,9 @@ Return ONLY: {"recommended":"founder|story|ingredient|problem","notes":{"founder
     }
     lines.push(`Generate ${task.count} options for "${task.title}". ${task.fields}`);
     lines.push(task.web ? "Search the web for real, current data and cite real source urls." : "Do not use web search \u2014 generate from your knowledge.");
-    lines.push("Keep every field tight and glanceable: body = one sentence max; bullets = short phrases, not sentences; no padding or preamble. A card is scanned, not read.");
+    lines.push(
+      task.longform ? "These cards are complete DRAFTS, not glanceable chips: title = the draft's angle in a few words; body = the full draft at the length the spec above asks for, as flowing prose \u2014 no headers or lists inside body. Each card must take a genuinely different angle, and nothing may be fabricated beyond the locked decisions and brief." : "Keep every field tight and glanceable: body = one sentence max; bullets = short phrases, not sentences; no padding or preamble. A card is scanned, not read."
+    );
     lines.push("");
     lines.push(
       `Return ONLY this JSON: {"cards":[{"title":"...","subtitle":"...","body":"...","bullets":["..."],"chips":["..."],"palette":[{"name":"...","hex":"#RRGGBB"}],"meta":[{"label":"...","value":"..."}],"reference":{"brand":"...","domain":"...","url":"..."},"source":"..."}]}. Include only the fields named for this task; omit the rest.`
@@ -2766,7 +2898,7 @@ Return ONLY: {"recommended":"founder|story|ingredient|problem","notes":{"founder
     return Response.json({ cards });
   }
 
-  // ../brandbrain/app/api/studio/shelf/route.ts
+  // ../../../brandbrain/app/api/studio/shelf/route.ts
   var route_exports24 = {};
   __export(route_exports24, {
     POST: () => POST23,
@@ -2861,7 +2993,7 @@ Aim for 8-12 real products spanning the price range and the different marketplac
     return Response.json({ products });
   }
 
-  // ../brandbrain/app/api/studio/store/route.ts
+  // ../../../brandbrain/app/api/studio/store/route.ts
   var route_exports25 = {};
   __export(route_exports25, {
     POST: () => POST24,
@@ -2921,7 +3053,7 @@ Call get-new-store-previews once with those fields + userUnderstandsNewStoreOnly
     return Response.json({ previews });
   }
 
-  // ../brandbrain/app/api/studio/story/route.ts
+  // ../../../brandbrain/app/api/studio/story/route.ts
   var route_exports26 = {};
   __export(route_exports26, {
     POST: () => POST25,
@@ -2986,7 +3118,7 @@ Return ONLY the JSON.`;
     return Response.json({ done: true, summary: str4(parsed.summary), brief, gap });
   }
 
-  // ../brandbrain/app/api/studio/trends/route.ts
+  // ../../../brandbrain/app/api/studio/trends/route.ts
   var route_exports27 = {};
   __export(route_exports27, {
     POST: () => POST26,
@@ -3075,7 +3207,7 @@ Rules: 4-6 trends, each genuinely distinct and specific to this category (not "c
     return Response.json({ trends: { ...trends, grounded } });
   }
 
-  // ../brandbrain/app/api/studio/validate/route.ts
+  // ../../../brandbrain/app/api/studio/validate/route.ts
   var route_exports28 = {};
   __export(route_exports28, {
     POST: () => POST27,
@@ -3202,7 +3334,7 @@ Each fact "label" is a SHORT tag of 1-4 words (e.g. "TAM", "Category CAGR", "IRI
     return Response.json({ validation });
   }
 
-  // ../brandbrain/app/api/studio/vc-lens/route.ts
+  // ../../../brandbrain/app/api/studio/vc-lens/route.ts
   var route_exports29 = {};
   __export(route_exports29, {
     POST: () => POST28,
@@ -3283,7 +3415,7 @@ Return ONLY this JSON:
     return Response.json({ lens });
   }
 
-  // ../brandbrain/app/api/studio/visual/route.ts
+  // ../../../brandbrain/app/api/studio/visual/route.ts
   var route_exports30 = {};
   __export(route_exports30, {
     POST: () => POST29,
@@ -3357,7 +3489,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     return Response.json({ url: url2, kind, jobId });
   }
 
-  // ../brandbrain/app/api/vendors/route.ts
+  // ../../../brandbrain/app/api/vendors/route.ts
   var route_exports31 = {};
   __export(route_exports31, {
     GET: () => GET2,
@@ -3366,7 +3498,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     runtime: () => runtime31
   });
 
-  // examples/adapter/claude_storage.mjs
+  // ../adapter/claude_storage.mjs
   var WORKSPACE_KEY = "workspace";
   var VENDORS_KEY = "vendors";
   async function req(params) {
@@ -3440,7 +3572,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // ../brandbrain/app/api/vendors/route.ts
+  // ../../../brandbrain/app/api/vendors/route.ts
   var runtime31 = "nodejs";
   var dynamic2 = "force-dynamic";
   async function GET2() {
@@ -3463,7 +3595,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // ../brandbrain/app/api/workspace/route.ts
+  // ../../../brandbrain/app/api/workspace/route.ts
   var route_exports32 = {};
   __export(route_exports32, {
     GET: () => GET3,
@@ -3494,7 +3626,7 @@ generate_image returns a pending job \u2014 then poll job_display with that job 
     }
   }
 
-  // examples/brandbrain-port/routes-entry.mjs
+  // routes-entry.mjs
   var routes = {
     "/api/ask": route_exports,
     "/api/img": route_exports2,
