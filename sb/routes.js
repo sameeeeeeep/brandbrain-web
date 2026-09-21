@@ -3448,7 +3448,7 @@ Return ONLY this JSON:
     if (kind === "palette")
       return `A clean brand PALETTE & style reference board \u2014 abstract colour fields, soft gradients and material textures built ONLY from the exact brand colours below, giving each colour meaningful space. A pure colour-and-mood anchor: absolutely NO product, NO text, NO logo, NO people. ${ctx}`;
     if (kind === "logo")
-      return `A clean, modern brand LOGO / wordmark for this brand \u2014 just the mark on a simple on-brand background, no product, no photo, crisp and graphic, works as an app icon and on packaging. ${ctx}`;
+      return `A brand SYMBOL / icon mark for this brand \u2014 a simple, memorable pictorial or monogram mark, NO words, NO lettering beyond at most a single initial letter, flat and graphic on a simple on-brand background, crisp at small sizes, works as an app icon and a packaging stamp. ${ctx}`;
     if (kind === "moodboard")
       return `A brand MOODBOARD / key visual that captures the FEEL of this brand \u2014 atmospheric, editorial, on-brand colours and textures, evocative, NO text or logo. ${ctx}`;
     if (kind === "product")
