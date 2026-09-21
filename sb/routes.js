@@ -2120,7 +2120,9 @@ map: pick the TWO dimensions that best SEPARATE this market (e.g. price accessib
       system: STUDIO_SYSTEM2,
       allowedTools: grounded ? ["WebSearch", "WebFetch"] : void 0,
       effort: "low",
-      timeoutMs: grounded ? 14e4 : 6e4
+      // The "fast draft" is usually 1-3s but a long market JSON at busy hours can run past a minute —
+      // 60s was killing real, nearly-done generations (observed 18 Sep: two 60s kills → 503).
+      timeoutMs: grounded ? 14e4 : 12e4
     };
     const p = prompt3(idea, body.brief, body.steer);
     let text = await runClaude(p, opts);
@@ -3423,7 +3425,7 @@ Return ONLY this JSON:
     runtime: () => runtime30
   });
   var runtime30 = "nodejs";
-  var maxDuration28 = 240;
+  var maxDuration28 = 320;
   var aspect = (kind) => kind === "logo" ? "1:1" : kind === "moodboard" || kind === "palette" ? "16:9" : "4:5";
   function artDirection(b) {
     const palette = (b.palette ?? []).map((p) => `${p.name ?? ""} ${p.hex ?? ""}`.trim()).filter(Boolean).join(", ");
@@ -3475,14 +3477,15 @@ CONSISTENCY REFERENCE: this brand already has a generated visual \u2014 job id "
 
 Image brief: ${describe2(kind, b)}${steerClause}${refClause}
 
-generate_image returns a pending job \u2014 then poll job_display with that job id until its status is "completed", and read the final hosted image URL from the result (the raw png url). Do not give up while it is merely pending/in_progress; wait for completion. When you have the final URL, reply with ONLY this JSON and nothing else: {"url":"<the final https image url>","jobId":"<the generate_image job id>"}. If you genuinely cannot generate it (no image tool, or it failed), reply with {"url":null}.`;
-    const text = await runClaude(prompt5, { mcp: true, timeoutMs: 22e4 });
+generate_image returns a pending job \u2014 then poll job_display with that job id until its status is "completed", and read the final hosted image URL from the result (the raw png url). Do not give up while it is merely pending/in_progress; wait for completion. When you have the final URL, reply with ONLY this JSON and nothing else: {"url":"<the final https image url>","jobId":"<the generate_image job id>"}. If you genuinely cannot generate it (no image tool, or it failed), reply with {"url":null,"reason":"<one short plain-English line: the ACTUAL error the tool returned, e.g. a daily generation limit, auth failure, or content refusal>"}.`;
+    const text = await runClaude(prompt5, { mcp: true, timeoutMs: 3e5 });
     const parsed = text ? extractJson(text) : null;
     const url2 = typeof parsed?.url === "string" && /^https?:\/\//i.test(parsed.url) ? parsed.url : null;
     const jobId = typeof parsed?.jobId === "string" && parsed.jobId.trim() ? parsed.jobId.trim() : null;
     if (!url2) {
+      const reason = typeof parsed?.reason === "string" && parsed.reason.trim() ? parsed.reason.trim().slice(0, 200) : null;
       return Response.json(
-        { error: "Couldn\u2019t generate the visual \u2014 is Higgsfield connected to your Claude Code?" },
+        { error: reason ? `Couldn\u2019t generate the visual \u2014 ${reason}` : "Couldn\u2019t generate the visual \u2014 is Higgsfield connected to your Claude Code?" },
         { status: 503 }
       );
     }
