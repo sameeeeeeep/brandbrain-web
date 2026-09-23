@@ -1,8 +1,8 @@
 (() => {
-  // ../../packages/protocol/dist/version.js
+  // packages/protocol/dist/version.js
   var PROVIDER_GLOBAL = "claude";
 
-  // ../../packages/protocol/dist/origins.js
+  // packages/protocol/dist/origins.js
   var VERIFIED_DOMAINS = ["thelastprompt.ai", "sameep.ai"];
   var VERIFIED_EXACT = ["sameeeeeeep.github.io"];
   function isVerifiedOrigin(origin) {
@@ -24,13 +24,13 @@
     return VERIFIED_DOMAINS.some((d) => host === d || host.endsWith("." + d));
   }
 
-  // ../../packages/protocol/dist/storage.js
+  // packages/protocol/dist/storage.js
   var STORAGE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
   function isValidStorageKey(key) {
     return typeof key === "string" && STORAGE_KEY_RE.test(key);
   }
 
-  // ../../packages/protocol/dist/errors.js
+  // packages/protocol/dist/errors.js
   var BYOPErrorCode = {
     /** User rejected the connect/consent request. (≈ 4001) */
     USER_REJECTED: 4001,
@@ -62,7 +62,7 @@
     NO_GUIDE_RUNTIME: 4510
   };
 
-  // ../../packages/sdk/dist/connect-chip.js
+  // packages/sdk/dist/connect-chip.js
   function rungFromError(e) {
     if (e?.code !== BYOPErrorCode.PROVIDER_UNAVAILABLE)
       return null;
@@ -514,7 +514,7 @@
     };
   }
 
-  // ../../packages/sdk/dist/index.js
+  // packages/sdk/dist/index.js
   var warnedStorageKeys = /* @__PURE__ */ new Set();
   function warnBadStorageKey(key) {
     if (isValidStorageKey(key) || warnedStorageKeys.has(key))
@@ -700,7 +700,7 @@
     });
   }
 
-  // ../adapter/claude.mjs
+  // examples/adapter/claude.mjs
   var provider = typeof window !== "undefined" && window.claude && window.claude.isRelay ? window.claude : null;
   var _resolveReady;
   var _ready = new Promise((r) => {
@@ -727,7 +727,7 @@
     }
   }
 
-  // ../adapter/claude_storage.mjs
+  // examples/adapter/claude_storage.mjs
   async function req(params) {
     const provider2 = getProvider() || await whenProvider();
     if (!provider2) throw new Error("no provider \u2014 call setProvider(window.claude) after connect");
@@ -755,7 +755,7 @@
     return workspaceLost && !workspaceRead;
   }
 
-  // src/bootstrap.js
+  // examples/brandbrain-port/src/bootstrap.js
   function flattenPalette(raw) {
     const flat = [], rich = [];
     for (const p of Array.isArray(raw) ? raw : []) {
